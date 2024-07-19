@@ -88,7 +88,38 @@ public class employees {
     }
 
     public int resignEmployee()     {
-        return 0;
+    	Scanner sc = new Scanner(System.in);
+    	
+        System.out.println("Enter Employee Number To Resign:");
+        employeeID = sc.nextInt();
+        sc.nextLine(); // Consume newline
+        
+        try {
+            Connection conn;
+            conn = DriverManager.getConnection(url, username, password);
+            System.out.println("Connection Successful");
+            conn.setAutoCommit(false);
+
+            String sql = "{CALL deactivateEmployee(?, ?, ?)}"; 
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+
+            pstmt.setInt(1, employeeID);
+            pstmt.setString(2, endUsername);
+            pstmt.setString(3, endUserReason);
+            
+            System.out.println("Press Enter to Resign Employee");
+            sc.nextLine();
+
+            pstmt.executeUpdate();
+            pstmt.close();
+            conn.commit();
+            conn.close();
+            System.out.println("Employee has Resigned!");
+            return 1;
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return 0;
+        } 
     }
 
     public int createSalesRepAssign()     {
@@ -107,36 +138,7 @@ public class employees {
             System.out.println("Connection Successful");
             conn.setAutoCommit(false);
             
-            // PreparedStatement pstmt = conn.prepareStatement("SELECT productName, productLine, quantityInStock, buyPrice, MSRP FROM products WHERE productCode=? LOCK IN SHARE MODE");
-            // pstmt.setString(1, productCode);
             
-            // System.out.println("Press enter key to start retrieving the data");
-            // sc.nextLine();
-            
-            // ResultSet rs = pstmt.executeQuery();   
-            
-            // while (rs.next()) {
-            //     productName     = rs.getString("productName");
-            //     productLine     = rs.getString("productLine");
-            //     quantityInStock = rs.getInt("quantityInStock");
-            //     buyPrice        = rs.getFloat("buyPrice");
-            //     MSRP            = rs.getFloat("MSRP");
-            // }
-            
-            // rs.close();
-            
-            // System.out.println("Product Name: " + productName);
-            // System.out.println("Product Line: " + productLine);
-            // System.out.println("Quantity:     " + quantityInStock);
-            // System.out.println("Buy Price:    " + buyPrice);
-            // System.out.println("MSRP:         " + MSRP);
-            
-            // System.out.println("Press enter key to end transaction");
-            // sc.nextLine();
-
-            // pstmt.close();
-            // conn.commit();
-            // conn.close();
             return 1;
         } catch (Exception e) {
             System.out.println(e.getMessage());
@@ -154,7 +156,7 @@ public class employees {
         // Letting the user choose between the functions
         // kenneth 0, 2, 4 
         // laiven 1, 3, 5
-        System.out.println("Enter Type: \n  [0] - CREATE AN EMPLOYEE \n  [1] - RESIGN EMPLOYEE \n  [2] - CREATE AN EMPLOYEE \n  [3] - CREATE NEW SALES REP ASSIGNMENT OR SALES REP ONLY \n  [4] - VIEW ALL DETAILS OF SALES REP (PREVIOUS ASSIGN) \n  [5] - VIEW BASIC EMPLOYEE RECORD ");
+        System.out.println("Enter Type: \n  [0] - CREATE AN EMPLOYEE \n  [1] - RECLASSIFY EMPLOYEE \n  [2] - RESIGN EMPLOYEE \n  [3] - CREATE NEW SALES REP ASSIGNMENT OR SALES REP ONLY \n  [4] - VIEW ALL DETAILS OF SALES REP (PREVIOUS ASSIGN) \n  [5] - VIEW BASIC EMPLOYEE RECORD ");
 
         choice = sc.nextInt();
         employees e = new employees();
