@@ -126,16 +126,8 @@ public class employees {
         // Letting the user choose between the functions
         // kenneth 0, 2, 4 
         // laiven 1, 3, 5
-        // System.out.println("Enter Type of Task");
-        // System.out.println("Enter Type: [0] - CREATE AN EMPLOYEE");
-        // System.out.println("Enter Type: [1] - RECLASSIFY EMPLOYEE TYPE");
-        // System.out.println("Enter Type: [2] - CREATE AN EMPLOYEE");
-        // System.out.println("Enter Type: [3] - CREATE AN EMPLOYEE");
-        // System.out.println("Enter Type: [4] - CREATE AN EMPLOYEE");
-        // System.out.println("Enter Type: [5] - CREATE AN EMPLOYEE");
-
         System.out.println("Enter Type: \n  [0] - CREATE AN EMPLOYEE \n  [1] - RESIGN EMPLOYEE \n  [2] - CREATE AN EMPLOYEE \n  [3] - CREATE NEW SALES REP ASSIGNMENT OR SALES REP ONLY \n  [4] - VIEW ALL DETAILS OF SALES REP (PREVIOUS ASSIGN) \n  [5] - VIEW BASIC EMPLOYEE RECORD ");
-        //"1 -  /n 2 -  /n "
+
         choice = sc.nextInt();
         employees e = new employees();
         if (choice==0) e.addEmployee();
