@@ -9,7 +9,7 @@ public class employees {
     public String password = "DLSU1234!";
 
     public int      employeeID;
-    
+
     public String   lastName;
     public String   firstName;
     public String   extension;
@@ -17,6 +17,7 @@ public class employees {
     public String   jobTitle;
     public String   employee_type;
     public int      deptCode;
+    public int      is_deactivated;
     public String   endUsername = null;
     public String   endUserReason = null;
     
@@ -145,7 +146,60 @@ public class employees {
     }
     
     public int viewEmployee()     {
-        return 0;
+        Scanner sc = new Scanner(System.in);
+
+        System.out.println("Enter Employee ID:");
+        employeeID = Integer.parseInt(sc.nextLine());
+
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            Connection conn = DriverManager.getConnection(url, username, password);
+            System.out.println("Connection Successful");
+            conn.setAutoCommit(false);
+
+            String sql = "SELECT * FROM employees WHERE employeeNumber = ?";
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, employeeID);
+
+            System.out.println("Press Enter to Start Viewing the Employee");
+            sc.nextLine();
+
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                employeeID = rs.getInt("employeeNumber");
+                lastName = rs.getString("lastName");
+                firstName = rs.getString("firstName");
+                extension = rs.getString("extension");
+                email = rs.getString("email");
+                jobTitle = rs.getString("jobTitle");
+                employee_type = rs.getString("employee_type");
+                is_deactivated = rs.getInt("is_deactivated");
+
+                System.out.println("Employee ID: " + employeeID);
+                System.out.println("Last Name: " + lastName);
+                System.out.println("First Name: " + firstName);
+                System.out.println("Extension: " + extension);
+                System.out.println("Email: " + email);
+                System.out.println("jobTitle: " + jobTitle);
+                System.out.println("employee_type: " + employee_type);
+                System.out.println("is_deactivated: " + is_deactivated);
+            } else {
+                System.out.println("Employee does not exist.");
+            }
+
+            rs.close();
+            pstmt.close();
+            conn.commit();
+            conn.close();
+
+            return 1;
+
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return 0;
+        }
+
     }
 
     public static void main(String[] args) {
