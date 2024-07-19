@@ -2,51 +2,79 @@ import java.sql.*;
 import java.util.*;
 
 public class employees {
+    // Database URL
+    public String url = "jdbc:mysql://mysql-176128-0.cloudclusters.net:10107/dbsalesV2.5G205";
+    // Database credentials
+    public String username = "DBADM_205";
+    public String password = "DLSU1234!";
 
     public int      employeeID;
-
-    // public String   productName;
-    // public String   productLine;
-    // public int      quantityInStock;
-    // public float    buyPrice;
-    // public float    MSRP;
+    
+    public String   lastName;
+    public String   firstName;
+    public String   extension;
+    public String   email; 
+    public String   jobTitle;
+    public String   employee_type;
+    public int      deptCode;
+    public String   endUsername = null;
+    public String   endUserReason = null;
+    
 
     public employees(){}
 
     public int addEmployee()        {
-        // Database URL
-        String url = "jdbc:mysql://localhost:3306/your_database";
-        // Database credentials
-        String username = "your_username";
-        String password = "your_password";
+    	Scanner sc = new Scanner(System.in);
+    	
+    	System.out.println("Enter Last Name:");
+        lastName = sc.nextLine();
 
+        System.out.println("Enter First Name:");
+        firstName = sc.nextLine();
+
+        System.out.println("Enter Extension:");
+        extension = sc.nextLine();
+
+        System.out.println("Enter Email:");
+        email = sc.nextLine();
+
+        System.out.println("Enter Job Title:");
+        jobTitle = sc.nextLine();
+
+        System.out.println("Enter Employee Type (Sales Representatives, Inventory Manager, Sales Manager):");
+        employee_type = sc.nextLine();
+
+        System.out.println("Enter Department Code (Enter 0 if not applicable):");
+        deptCode = sc.nextInt();
+        sc.nextLine(); // Consume newline
+        
         try {
             Connection conn;
-            CallableStatement callableStmt;
             conn = DriverManager.getConnection(url, username, password);
             System.out.println("Connection Successful");
             conn.setAutoCommit(false);
 
             String sql = "{CALL add_employee(?, ?, ?, ?, ?, ?, ?, ?, ?)}"; 
-            callableStmt = conn.prepareCall(sql);
+            PreparedStatement pstmt = conn.prepareStatement(sql);
 
-            // Step 4: Set input parameters if any
-            callableStmt.setInt(1, 123); // Example parameter
-            callableStmt.setString(2, "example"); // Example parameter
+            pstmt.setString(1, lastName);
+            pstmt.setString(2, firstName);
+            pstmt.setString(3, extension);
+            pstmt.setString(4, email);
+            pstmt.setString(5, jobTitle);
+            pstmt.setString(6, employee_type);
+            pstmt.setInt(7, deptCode);
+            pstmt.setString(8, endUsername);
+            pstmt.setString(9, endUserReason);
+            
+            System.out.println("Press Enter to Start Adding Employee");
+            sc.nextLine();
 
-            // Step 5: Execute the stored procedure
-            boolean hasResults = callableStmt.execute();
-
-            // Step 6: Process the result set if there are any results
-            if (hasResults) {
-                ResultSet rs = callableStmt.getResultSet();
-                while (rs.next()) {
-                    // Retrieve data from the result set
-                    int id = rs.getInt("id");
-                    String name = rs.getString("name");
-                    System.out.println("ID: " + id + ", Name: " + name);
-                }
-            }
+            pstmt.executeUpdate();
+            pstmt.close();
+            conn.commit();
+            conn.close();
+            System.out.println("Employee was added!");
             return 1;
         } catch (Exception e) {
             System.out.println(e.getMessage());
@@ -139,5 +167,6 @@ public class employees {
         
         System.out.println("Press enter key to continue....");
         sc.nextLine();
+        sc.close();
     }
 }
