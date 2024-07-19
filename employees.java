@@ -3,12 +3,13 @@ import java.util.*;
 
 public class employees {
 
-    public String   productCode;
-    public String   productName;
-    public String   productLine;
-    public int      quantityInStock;
-    public float    buyPrice;
-    public float    MSRP;
+    public int      employeeID;
+
+    // public String   productName;
+    // public String   productLine;
+    // public int      quantityInStock;
+    // public float    buyPrice;
+    // public float    MSRP;
 
     public employees(){}
 
@@ -19,19 +20,14 @@ public class employees {
         String username = "your_username";
         String password = "your_password";
 
-        // Connection and CallableStatement objects
-        Connection conn = null;
-        CallableStatement callableStmt = null;
-
         try {
-            // Step 1: Load the MySQL JDBC driver
-            Class.forName("com.mysql.cj.jdbc.Driver");
-
-            // Step 2: Establish the connection to the database
+            Connection conn;
+            CallableStatement callableStmt;
             conn = DriverManager.getConnection(url, username, password);
+            System.out.println("Connection Successful");
+            conn.setAutoCommit(false);
 
-            // Step 3: Prepare the CallableStatement
-            String sql = "{CALL your_stored_procedure(?, ?)}"; // Adjust according to your stored procedure
+            String sql = "{CALL add_employee(?, ?, ?, ?, ?, ?, ?, ?, ?)}"; 
             callableStmt = conn.prepareCall(sql);
 
             // Step 4: Set input parameters if any
@@ -51,8 +47,8 @@ public class employees {
                     System.out.println("ID: " + id + ", Name: " + name);
                 }
             }
-        } catch (SQLException | ClassNotFoundException e) {
-            e.printStackTrace();
+            return 1;
+        } catch (Exception e) {
             System.out.println(e.getMessage());
             return 0;
         } 
@@ -72,7 +68,52 @@ public class employees {
     }
 
     public int viewSalesRepDetails()     {
-        return 0;
+        float   incr;
+        Scanner sc = new Scanner(System.in);
+        System.out.println("Enter Sales Representative ID:");
+        employeeID = sc.nextInt();
+
+        try {
+            Connection conn; 
+            conn = DriverManager.getConnection("jdbc:mysql://mysql-176128-0.cloudclusters.net:10107/dbsalesV2.5G205?useTimezone=true&serverTimezone=UTC&user=DBADM_205&password=DLSU1234!");
+            System.out.println("Connection Successful");
+            conn.setAutoCommit(false);
+            
+            // PreparedStatement pstmt = conn.prepareStatement("SELECT productName, productLine, quantityInStock, buyPrice, MSRP FROM products WHERE productCode=? LOCK IN SHARE MODE");
+            // pstmt.setString(1, productCode);
+            
+            // System.out.println("Press enter key to start retrieving the data");
+            // sc.nextLine();
+            
+            // ResultSet rs = pstmt.executeQuery();   
+            
+            // while (rs.next()) {
+            //     productName     = rs.getString("productName");
+            //     productLine     = rs.getString("productLine");
+            //     quantityInStock = rs.getInt("quantityInStock");
+            //     buyPrice        = rs.getFloat("buyPrice");
+            //     MSRP            = rs.getFloat("MSRP");
+            // }
+            
+            // rs.close();
+            
+            // System.out.println("Product Name: " + productName);
+            // System.out.println("Product Line: " + productLine);
+            // System.out.println("Quantity:     " + quantityInStock);
+            // System.out.println("Buy Price:    " + buyPrice);
+            // System.out.println("MSRP:         " + MSRP);
+            
+            // System.out.println("Press enter key to end transaction");
+            // sc.nextLine();
+
+            // pstmt.close();
+            // conn.commit();
+            // conn.close();
+            return 1;
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return 0;
+        }
     }
     
     public int viewEmployee()     {
@@ -81,14 +122,16 @@ public class employees {
 
     public static void main(String[] args) {
         Scanner sc     = new Scanner (System.in);
-        int     choice = 0;
+        int     choice;
         // Letting the user choose between the functions
         // kenneth 0, 2, 4 
         // laiven 1, 3, 5
-        System.out.println("Enter 0 - CREATE AN EMPLOYEE /n 1 - RECLASSIFY EMPLOYEE TYPE /n 2 - RESIGN EMPLOYEE /n 3 - CREATE NEW SALES REP ASSIGNMENT OR SALES REP ONLY /n 4 - VIEW ALL DETAILS OF SALES REP (PREVIOUS ASSIGN) /n 5 - VIEW BASIC EMPLOYEE RECORD ");
+
+        System.out.println("Enter Type: \n  [0] - CREATE AN EMPLOYEE \n  [1] - RESIGN EMPLOYEE \n  [2] - CREATE AN EMPLOYEE \n  [3] - CREATE NEW SALES REP ASSIGNMENT OR SALES REP ONLY \n  [4] - VIEW ALL DETAILS OF SALES REP (PREVIOUS ASSIGN) \n  [5] - VIEW BASIC EMPLOYEE RECORD ");
+        //"1 -  /n 2 -  /n "
         choice = sc.nextInt();
         employees e = new employees();
-        if (choice==0) e.addEmployee(); 
+        if (choice==0) e.addEmployee();
         if (choice==1) e.reclassifyEmployee();
         if (choice==2) e.resignEmployee();
         if (choice==3) e.createSalesRepAssign();
