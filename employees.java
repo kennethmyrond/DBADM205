@@ -17,6 +17,15 @@ public class employees {
     public String   jobTitle;
     public String   employee_type;
     public int      deptCode;
+    public int      is_deactivated;
+    
+    public String officeCode;
+    public String startDate;
+    public String endDate;
+    public String reason;
+    public double quota;
+    public int salesManagerNumber;
+    
     public String   endUsername = null;
     public String   endUserReason = null;
     
@@ -127,22 +136,88 @@ public class employees {
     }
 
     public int viewSalesRepDetails()     {
-        float   incr;
-        Scanner sc = new Scanner(System.in);
-        System.out.println("Enter Sales Representative ID:");
-        employeeID = sc.nextInt();
+    	Scanner sc = new Scanner(System.in);
+
+        System.out.println("Enter Employee ID:");
+        employeeID = Integer.parseInt(sc.nextLine());
+        
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
 
         try {
-            Connection conn; 
-            conn = DriverManager.getConnection("jdbc:mysql://mysql-176128-0.cloudclusters.net:10107/dbsalesV2.5G205?useTimezone=true&serverTimezone=UTC&user=DBADM_205&password=DLSU1234!");
+            conn = DriverManager.getConnection(url, username, password);
             System.out.println("Connection Successful");
             conn.setAutoCommit(false);
+
+            String sql = "SELECT \r\n"
+            		+ "    sra.officeCode, \r\n"
+            		+ "    sra.startDate, \r\n"
+            		+ "    sra.endDate, \r\n"
+            		+ "    sra.reason, \r\n"
+            		+ "    sra.quota, \r\n"
+            		+ "    sra.salesManagerNumber,\r\n"
+            		+ "    e.firstName AS salesManagerFirstName,\r\n"
+            		+ "    e.lastName AS salesManagerLastName\r\n"
+            		+ "FROM \r\n"
+            		+ "    salesRepAssignments sra  \r\n"
+            		+ "LEFT JOIN \r\n"
+            		+ "    employees e \r\n"
+            		+ "ON \r\n"
+            		+ "    e.employeeNumber = sra.salesManagerNumber\r\n"
+            		+ "WHERE \r\n"
+            		+ "    sra.employeeNumber = ? LOCK IN SHARE MODE";
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, employeeID);
+
+            System.out.println("Press Enter to Start Viewing Sales Rep Assignment");
+            sc.nextLine();
+
+            rs = pstmt.executeQuery();
             
-            
+            boolean assignmentsFound = false;
+            while (rs.next()) {
+            	assignmentsFound = true;
+            	officeCode     		= rs.getString("officeCode");
+            	startDate     		= rs.getString("startDate");
+            	endDate 			= rs.getString("endDate");
+            	reason        		= rs.getString("reason");
+            	quota            	= rs.getDouble("quota");
+            	salesManagerNumber	= rs.getInt("salesManagerNumber");
+            	String salesManagerName	= rs.getString("salesManagerFirstName") + ' ' + rs.getString("salesManagerLastName");
+            	
+            	System.out.println("Office Code: " + officeCode);
+                System.out.println("Start Date: " + startDate);
+                System.out.println("End Date: " + endDate);
+                System.out.println("Reason: " + reason);
+                System.out.println("Quota: " + quota);
+                System.out.println("Sales Manager Number: " + salesManagerNumber);
+                System.out.println("Sales Manager Name: " + salesManagerName);
+                System.out.println("-----------------------------------");
+            }
+
+            if (!assignmentsFound) {
+                System.out.println("No sales rep assignments found for employee ID: " + employeeID);
+            }
+
+            rs.close();
+            pstmt.close();
+            conn.commit();
+            conn.close();
+
             return 1;
+
         } catch (Exception e) {
             System.out.println(e.getMessage());
             return 0;
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstmt != null) pstmt.close();
+                if (conn != null) conn.close();
+            } catch (SQLException se) {
+                se.printStackTrace();
+            }
         }
     }
     
