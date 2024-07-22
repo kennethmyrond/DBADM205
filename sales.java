@@ -399,17 +399,17 @@ public int updateOrder() {
             }
 
             // Get current status of the order
-            String getStatusSQL = "SELECT status FROM orders WHERE orderNumber = ?";
-            pstmt = conn.prepareStatement(getStatusSQL);
-            pstmt.setInt(1, v_orderNumber);
-            rs = pstmt.executeQuery();
+String getStatusSQL = "SELECT getCurrentStatus(?) AS status";
+pstmt = conn.prepareStatement(getStatusSQL);
+pstmt.setInt(1, v_orderNumber);
+rs = pstmt.executeQuery();
 
-            String status_var = "";
-            if (rs.next()) {
-                status_var = rs.getString("status");
-            }
-            rs.close();
-            pstmt.close();
+String status_var = "";
+if (rs.next()) {
+    status_var = rs.getString("status");
+}
+rs.close();
+pstmt.close();
 
             // Prevent the updating of the order if cancelled
             if (status_var.equals("Cancelled")) {
@@ -472,12 +472,13 @@ public int updateOrder() {
         Scanner sc = new Scanner(System.in);
         int choice;
         // Letting the user choose between the functions
-        System.out.println("Enter Type: \n  [0] - ADD AN ORDER \n  [1] - UPDATE ORDERED PRODUCT \n  [2] - CREATE AN EMPLOYEE \n  [3] - CREATE NEW SALES REP ASSIGNMENT OR SALES REP ONLY \n  [4] - VIEW ALL DETAILS OF SALES REP (PREVIOUS ASSIGN) \n  [5] - VIEW BASIC EMPLOYEE RECORD ");
+        System.out.println("Enter Type: \n  [0] - ADD AN ORDER \n  [1] - UPDATE ORDERED PRODUCT \n  [2] - UPDATE ORDER \n  [3] - CREATE NEW SALES REP ASSIGNMENT OR SALES REP ONLY \n  [4] - VIEW ALL DETAILS OF SALES REP (PREVIOUS ASSIGN) \n  [5] - VIEW BASIC EMPLOYEE RECORD ");
 
         choice = sc.nextInt();
         sales s = new sales();
         if (choice == 0) s.addOrder();
         else if (choice == 1) s.updateOrderProduct();
+        else if (choice == 2) s.updateOrder();
         else System.out.println("Invalid choice!");
 
         System.out.println("Press enter key to continue....");
