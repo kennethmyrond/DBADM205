@@ -138,6 +138,8 @@ public class employees {
     public int viewSalesRepDetails()     {
     	Scanner sc = new Scanner(System.in);
         String sql = null;
+        int range=0;
+        String baseSql = null;
 
         // \n [1] - All Current Sales Representatives \n [2] - All Previous Sales Representatives
         System.out.println("Enter Type of Record to View: \n [0] - All Sales Representatives record  \n [1] - Record of Specific Sales Rep");
@@ -145,9 +147,8 @@ public class employees {
 
         if(recordType == 0 ){
             System.out.println("Enter Range: \n [0] - Current Sales Representatives \n [1] - Previous Sales Representatives \n [2] - All Records");
-            int rangeSales = Integer.parseInt(sc.nextLine());
-
-            String baseSql =    "SELECT sra.employeeNumber, \r\n" + 
+            range = Integer.parseInt(sc.nextLine());
+            baseSql =    "SELECT sra.employeeNumber, \r\n" + 
                                 "    sra.officeCode, \r\n" + 
                                 "    em.firstName, em.lastName, \r\n" + 
                                 "    sra.startDate, \r\n" + 
@@ -160,29 +161,14 @@ public class employees {
                                 "FROM salesRepAssignments sra\r\n" + 
                                 "JOIN employees e ON e.employeeNumber = sra.salesManagerNumber\r\n" + 
                                 "JOIN employees em ON em.employeeNumber = sra.employeeNumber    \r\n";
-
-            String condition = "";
-            switch (rangeSales) {
-                case 0:
-                    condition = "WHERE (sra.endDate IS NULL OR sra.endDate > CURDATE()) \r\n";
-                    break;
-                case 1:
-                    condition = "WHERE sra.endDate <= CURDATE() \r\n";
-                    break;
-                case 2:
-                    // No additional condition needed for case 2
-                    break;
-            }
-            sql = baseSql + condition + "LOCK IN SHARE MODE;";
         }
         else if(recordType == 1){
             System.out.println("Enter Employee ID:");
             employeeID = Integer.parseInt(sc.nextLine());
 
             System.out.println("Enter Range: \n [0] - Current \n [1] - Previous \n [2] - All Assignments");
-            int range = Integer.parseInt(sc.nextLine());
-
-            String baseSql =    "SELECT \r\n" + 
+            range = Integer.parseInt(sc.nextLine());
+            baseSql =    "SELECT \r\n" + 
                                 "    sra.officeCode, \r\n" + 
                                 "    sra.startDate, \r\n" + 
                                 "    sra.endDate, \r\n" + 
@@ -194,24 +180,25 @@ public class employees {
                                 "FROM salesRepAssignments sra\r\n" + 
                                 "JOIN employees e ON e.employeeNumber = sra.salesManagerNumber\r\n" + 
                                 "WHERE sra.employeeNumber = ?\r\n";
-
-            String condition = "";
-            switch (range) {
-                case 0:
-                    condition = "AND (sra.endDate IS NULL OR sra.endDate > CURDATE()) \r\n";
-                    break;
-                case 1:
-                    condition = "AND sra.endDate <= CURDATE() \r\n";
-                    break;
-                case 2:
-                    // No additional condition needed for case 2
-                    break;
-            }
-            sql = baseSql + condition + "LOCK IN SHARE MODE;";
         }
         
+        String condition = "";
+        switch (range) {
+            case 0:
+                condition = "WHERE (sra.endDate IS NULL OR sra.endDate > CURDATE()) \r\n";
+                break;
+            case 1:
+                condition = "WHERE sra.endDate <= CURDATE() \r\n";
+                break;
+            case 2:
+                // No additional condition needed for case 2
+                break;
+        }
+        sql = baseSql + condition + "LOCK IN SHARE MODE;";
+
         Connection conn = null;
         PreparedStatement pstmt = null;
+        PreparedStatement sleeppstmt = null;
         ResultSet rs = null;
 
         try {
@@ -226,6 +213,10 @@ public class employees {
             sc.nextLine();
 
             rs = pstmt.executeQuery();
+
+            sleeppstmt = conn.prepareStatement("SELECT SLEEP (3)");
+            sleeppstmt.executeQuery();
+
             boolean assignmentsFound = false;
             
             while (rs.next()) {
@@ -263,6 +254,7 @@ public class employees {
 
             rs.close();
             pstmt.close();
+            sleeppstmt.close();
             conn.commit();
             conn.close();
 
@@ -286,7 +278,7 @@ public class employees {
         return 0;
     }
 
-    public void modifyEmployee() {
+    public int modifyEmployee() {
         Scanner sc = new Scanner(System.in);
 
         System.out.println("Enter Employee ID:");
@@ -324,9 +316,13 @@ public class employees {
                 System.out.println("Job Title: " + currentJobTitle);
             } else {
                 System.out.println("No employee found with the given ID.");
-                return;
+                return 1;
             }
             rs.close();
+
+            fetchPstmt = conn.prepareStatement("SELECT SLEEP (3)");
+            fetchPstmt.executeQuery();
+
             fetchPstmt.close();
 
             int empDetail;
@@ -384,10 +380,10 @@ public class employees {
                         break;
                     case 9:
                         System.out.println("Exiting...");
-                        //continue;
+                        return 1;
                     default:
                         System.out.println("Invalid choice, please try again.");
-                        //continue;
+                        return 1;
                 }
 
                 int rowsUpdated = updatePstmt.executeUpdate();
@@ -423,6 +419,83 @@ public class employees {
                 se.printStackTrace();
             }
         }
+        return 0;
+    }
+
+    public void assignDepartmentManager() {
+        Scanner sc = new Scanner(System.in);
+
+        System.out.println("Enter Department Code:");
+        int deptCode = Integer.parseInt(sc.nextLine());
+
+        Connection conn = null;
+        PreparedStatement fetchPstmt = null;
+        PreparedStatement SleepPstmt = null;
+        PreparedStatement updatePstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DriverManager.getConnection(url, username, password);
+            System.out.println("Connection Successful");
+            conn.setAutoCommit(false);
+
+            // Fetch and display current department details
+            String fetchSql = "SELECT deptName, deptManagerNumber FROM departments WHERE deptCode = ? FOR UPDATE";
+            fetchPstmt = conn.prepareStatement(fetchSql);
+            fetchPstmt.setInt(1, deptCode);
+
+            rs = fetchPstmt.executeQuery();
+            if (rs.next()) {
+                String deptName = rs.getString("deptName");
+                int currentManagerNumber = rs.getInt("deptManagerNumber");
+
+                System.out.println("Current Department Details:");
+                System.out.println("Department Code: " + deptCode);
+                System.out.println("Department Name: " + deptName);
+                System.out.println("Current Manager Number: " + currentManagerNumber);
+            } else {
+                System.out.println("No department found with the given code.");
+                return;
+            }
+            rs.close();
+
+            fetchPstmt = conn.prepareStatement("SELECT SLEEP (3)");
+            fetchPstmt.executeQuery();
+
+            fetchPstmt.close();
+
+            // Input new department manager details
+            System.out.println("Enter New Department Manager Number:");
+            int newManagerNumber = Integer.parseInt(sc.nextLine());
+
+            // Update department with new manager details
+            String updateSql = "UPDATE departments SET deptManagerNumber = ? WHERE deptCode = ?";
+            updatePstmt = conn.prepareStatement(updateSql);
+
+            updatePstmt.setInt(1, newManagerNumber);
+            updatePstmt.setInt(2, deptCode);
+
+            int rowsUpdated = updatePstmt.executeUpdate();
+            if (rowsUpdated > 0) {
+                System.out.println("Department manager updated successfully.");
+            } else {
+                System.out.println("No department found with the given code.");
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Error updating department manager: " + e.getMessage());
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (fetchPstmt != null) fetchPstmt.close();
+                if (updatePstmt != null) updatePstmt.close();
+                if (conn != null) {
+                    conn.commit();
+                    conn.close();}
+            } catch (SQLException se) {
+                se.printStackTrace();
+            }
+        }
     }
 
     public static void main(String[] args) {
@@ -441,6 +514,7 @@ public class employees {
                                 "  [4] - VIEW SALES REPRESENTATIVE DETAILS \n" +
                                 "  [5] - VIEW BASIC EMPLOYEE RECORD \n" +
                                 "  [6] - MODIFY EMPLOYEE RECORD \n" +
+                                "  [7] - ASSIGN DEPARTMENT MANAGER TO DEPARTMENT \n" +
                                 "  [9] - EXIT");
 
             choice = sc.nextInt();
@@ -468,6 +542,9 @@ public class employees {
                     break;
                 case 6:
                     e.modifyEmployee();
+                    break;
+                case 7:
+                    e.assignDepartmentManager();
                     break;
                 case 9:
                     System.out.println("Exiting the program...");
