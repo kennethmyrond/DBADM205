@@ -596,6 +596,7 @@ public class employees {
                 String endDate = rs.getString("endDate");
                 String reason = rs.getString("reason");
                 int quota = rs.getInt("quota");
+                int salesManagerNumber = rs.getInt("salesManagerNumber");
 
                 System.out.println("Current Details:");
                 System.out.println("Office Code: " + officeCode);
@@ -603,6 +604,7 @@ public class employees {
                 System.out.println("End Date: " + endDate);
                 System.out.println("Reason: " + reason);
                 System.out.println("Quota: " + quota);
+                System.out.println("Sales Manager Number: " + salesManagerNumber);
             } else {
                 System.out.println("No employee found with the given ID.");
                 return 1;
@@ -621,6 +623,7 @@ public class employees {
                     "  [1] - End Date \n" +
                     "  [2] - Reason \n" +
                     "  [3] - Quota \n" +
+                    "  [4] - Sales Manager Number \n" +
                     "  [9] - EXIT");
 
             int salesRepDetail = sc.nextInt();
@@ -648,11 +651,20 @@ public class employees {
                     break;
                 case 3:
                     System.out.println("Enter Quota");
-                    String newQuota = sc.nextLine();
+                    int newQuota = sc.nextInt();
 
-                    updateSql = "UPDATE salesRepAssignments SET reason = ? WHERE employeeNumber = ?";
+                    updateSql = "UPDATE salesRepAssignments SET quota = ? WHERE employeeNumber = ?";
                     updatePstmt = conn.prepareStatement(updateSql);
-                    updatePstmt.setString(1, newQuota);
+                    updatePstmt.setInt(1, newQuota);
+                    updatePstmt.setInt(2, employeeID);
+                    break;
+                case 4:
+                    System.out.println("Enter Sales Manager Number");
+                    int newSalesManagerNo = sc.nextInt();
+
+                    updateSql = "UPDATE salesRepAssignments SET salesManagerNumber = ? WHERE employeeNumber = ?";
+                    updatePstmt = conn.prepareStatement(updateSql);
+                    updatePstmt.setInt(1, newSalesManagerNo);
                     updatePstmt.setInt(2, employeeID);
                     break;
                 case 9:
