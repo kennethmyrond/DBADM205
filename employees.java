@@ -1317,12 +1317,12 @@ public class employees {
                     System.out.println("Invalid choice, please try again.");
             }
 
-            if (choice != 9) {
+            if (choice != 0) {
                 System.out.println("Press enter key to continue....");
                 sc.nextLine();
             }
 
-        } while (choice != 9);
+        } while (choice != 0);
 
         sc.close();
     }
