@@ -6,14 +6,14 @@ public class employees {
     // Database URL
     
     // public String url = "jdbc:mysql://mysql-176128-0.cloudclusters.net:10107/dbsalesV2.5G205";
-    // public String url = "jdbc:mysql://mysql-176128-0.cloudclusters.net:10107/DBSALES26_G205";
-    // public String username = "DBADM_205";
-    // public String password = "DLSU1234!";
+     public String url = "jdbc:mysql://mysql-176128-0.cloudclusters.net:10107/DBSALES26_G205";
+     public String username = "DBADM_205";
+     public String password = "DLSU1234!";
 
     
-    public String url = "jdbc:mysql://127.0.0.1:3306/dbsales26_g205";
-    public String username = "root";
-    public String password = "DLSU1234";
+    //public String url = "jdbc:mysql://127.0.0.1:3306/dbsales26_g205";
+    //public String username = "root";
+    //public String password = "DLSU1234";
 
 
     public int      employeeID;
@@ -578,6 +578,12 @@ public class employees {
     
         System.out.println("Enter Employee ID:");
         int employeeID = Integer.parseInt(sc.nextLine());
+
+        System.out.println("Enter Office Code:");
+        int officeCode = Integer.parseInt(sc.nextLine());
+
+        System.out.println("Enter Start Date [YYYY-MM-DD]:");
+        String startDate = sc.nextLine();
     
         Connection conn = null;
         PreparedStatement fetchPstmt = null;
@@ -590,17 +596,19 @@ public class employees {
             System.out.println("Connection Successful");
             conn.setAutoCommit(false);
     
-            String fetchSql = "SELECT * FROM salesRepAssignments WHERE employeeNumber = ? FOR UPDATE";
+            String fetchSql = "SELECT * FROM salesRepAssignments WHERE employeeNumber = ? AND officeCode = ? AND startDate = ? FOR UPDATE";
             fetchPstmt = conn.prepareStatement(fetchSql);
             fetchPstmt.setInt(1, employeeID);
+            fetchPstmt.setInt(2, officeCode);
+            fetchPstmt.setString(3, startDate);
     
             System.out.println("Press enter key to start retrieving the data");
             sc.nextLine();
     
             rs = fetchPstmt.executeQuery();
             if (rs.next()) {
-                int officeCode = rs.getInt("officeCode");
-                String startDate = rs.getString("startDate");
+                officeCode = rs.getInt("officeCode");
+                startDate = rs.getString("startDate");
                 String endDate = rs.getString("endDate");
                 String reason = rs.getString("reason");
                 int quota = rs.getInt("quota");
