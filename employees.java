@@ -4,10 +4,10 @@ import java.time.LocalDate;
 
 public class employees {
     // Database URL
-    public String url = "jdbc:mysql://mysql-176128-0.cloudclusters.net:10107/dbsalesV2.5G205";
+    public String url = "jdbc:mysql://localhost:3306/dbsalesv2.5g205";
     // Database credentials
-    public String username = "DBADM_205";
-    public String password = "DLSU1234!";
+    public String username = "root";
+    public String password = "12345678";
 
     public int      employeeID;
     
@@ -706,7 +706,7 @@ public class employees {
         ResultSet rs = null;
 
         try {
-            conn = DriverManager.getConnection(url, username, password);
+            conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/dbsalesv2.5g205", "root", "12345678");
             System.out.println("Connection Successful");
             conn.setAutoCommit(false);
 
@@ -779,7 +779,7 @@ public class employees {
         boolean isSalesManager = false;
 
         try {
-            conn = DriverManager.getConnection(url, username, password);
+            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/dbsalesv2.5g205", "root", "12345678");
             System.out.println("Connection Successful");
 
             String sql = "SELECT employeeNumber FROM employees WHERE jobTitle LIKE 'Sales Manager%'";
