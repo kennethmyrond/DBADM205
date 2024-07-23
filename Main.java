@@ -23,7 +23,7 @@ public class Main {
                     products.main(args);
                     break;
                 case 3:
-                    sales.main(args);
+                    //sales.main(args);
                     break;
                 case 0:
                     System.out.println("Exiting the program...");
