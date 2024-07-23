@@ -563,7 +563,7 @@ public class employees {
         System.out.println("---------------------------------------------------------------------------------------------------------------------------------------------");
     }
 
-    public int modifySalesRepAssign() {
+    public int modifySalesRepDetails() {
         Scanner sc = new Scanner(System.in);
 
         System.out.println("Enter Employee ID:");
@@ -595,13 +595,14 @@ public class employees {
                 String startDate = rs.getString("startDate");
                 String endDate = rs.getString("endDate");
                 String reason = rs.getString("reason");
-                String quota = rs.getInt("quota");
-                String currentJobTitle = rs.getString("jobTitle");
+                int quota = rs.getInt("quota");
 
                 System.out.println("Current Details:");
-                System.out.println("Extension: " + currentExtension);
-                System.out.println("Email: " + currentEmail);
-                System.out.println("Job Title: " + currentJobTitle);
+                System.out.println("Office Code: " + officeCode);
+                System.out.println("Start Date: " + startDate);
+                System.out.println("End Date: " + endDate);
+                System.out.println("Reason: " + reason);
+                System.out.println("Quota: " + quota);
             } else {
                 System.out.println("No employee found with the given ID.");
                 return 1;
@@ -616,54 +617,42 @@ public class employees {
             int empDetail;
             // do {
             // Displaying the menu options to the user
-            System.out.println("\nSelect Employee Detail To Edit: \n" +
-                    "  [1] - Extension \n" +
-                    "  [2] - Email \n" +
-                    "  [3] - Job Title \n" +
+            System.out.println("\nSelect Sale Representative Assignmment Detail To Edit: \n" +
+                    "  [1] - End Date \n" +
+                    "  [2] - Reason \n" +
+                    "  [3] - Quota \n" +
                     "  [9] - EXIT");
 
-            empDetail = sc.nextInt();
+            int salesRepDetail = sc.nextInt();
             sc.nextLine(); // Consume the newline character
 
             String updateSql = null;
-            switch (empDetail) {
+            switch (salesRepDetail) {
                 case 1:
-                    System.out.println("Enter New Extension:");
-                    String newExtension = sc.nextLine();
+                    System.out.println("Enter New End Date:");
+                    String newEndDate = sc.nextLine();
 
-                    updateSql = "UPDATE employees SET extension = ? WHERE employeeNumber = ?";
+                    updateSql = "UPDATE salesRepAssignments SET endDate = ? WHERE employeeNumber = ?";
                     updatePstmt = conn.prepareStatement(updateSql);
-                    updatePstmt.setString(1, newExtension);
+                    updatePstmt.setString(1, newEndDate);
                     updatePstmt.setInt(2, employeeID);
                     break;
                 case 2:
-                    System.out.println("Enter New Email:");
-                    String newEmail = sc.nextLine();
+                    System.out.println("Enter New Reason:");
+                    String newReason = sc.nextLine();
 
-                    updateSql = "UPDATE employees SET email = ? WHERE employeeNumber = ?";
+                    updateSql = "UPDATE salesRepAssignments SET reason = ? WHERE employeeNumber = ?";
                     updatePstmt = conn.prepareStatement(updateSql);
-                    updatePstmt.setString(1, newEmail);
+                    updatePstmt.setString(1, newReason);
                     updatePstmt.setInt(2, employeeID);
                     break;
                 case 3:
-                    System.out.println("Available Job Titles:");
-                    String jobTitlesSql = "SELECT jobTitle FROM employees_jobTitles LOCK IN SHARE MODE;";
-                    jobTitlesPstmt = conn.prepareStatement(jobTitlesSql);
-                    jobTitlesRs = jobTitlesPstmt.executeQuery();
+                    System.out.println("Enter Quota");
+                    String newQuota = sc.nextLine();
 
-                    while (jobTitlesRs.next()) {
-                        System.out.println("- " + jobTitlesRs.getString("jobTitle"));
-                    }
-
-                    jobTitlesRs.close();
-                    jobTitlesPstmt.close();
-
-                    System.out.println("\nEnter New Job Title:");
-                    String newJobTitle = sc.nextLine();
-
-                    updateSql = "UPDATE employees SET jobTitle  = ? WHERE employeeNumber = ?";
+                    updateSql = "UPDATE salesRepAssignments SET reason = ? WHERE employeeNumber = ?";
                     updatePstmt = conn.prepareStatement(updateSql);
-                    updatePstmt.setString(1, newJobTitle);
+                    updatePstmt.setString(1, newQuota);
                     updatePstmt.setInt(2, employeeID);
                     break;
                 case 9:
@@ -676,7 +665,7 @@ public class employees {
 
             int rowsUpdated = updatePstmt.executeUpdate();
             if (rowsUpdated > 0) {
-                System.out.println("Employee details updated successfully.");
+                System.out.println("Sales Representative Assignment details updated successfully.");
             } else {
                 System.out.println("No employee found with the given ID.");
             }
@@ -1241,6 +1230,7 @@ public class employees {
                         System.out.println("Enter Activity: \n" +
                                            "  [1] - CREATE NEW SALES REP ASSIGNMENT FOR SALES REP ONLY \n" +
                                            "  [2] - VIEW SALES REPRESENTATIVE DETAILS \n" +
+                                           "  [3] - EDIT SALES REPRESENTATIVE ASSIGNMENT DETAILS \n" +
                                            "  [0] - EXIT");
 
                         salesRepChoice = sc.nextInt();
