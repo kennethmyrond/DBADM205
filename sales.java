@@ -7,13 +7,13 @@ public class sales {
     //java -cp .;./mysql-connector-j-9.0.0.jar sales
 
     // Database URL
-    public String url = "jdbc:mysql://mysql-176128-0.cloudclusters.net:10107/DBSALES26_G205"; //jdbc:mysql://127.0.0.1:3306/db2.6test
+    public String url = "jdbc:mysql://127.0.0.1:3306/db2.6test"; //jdbc:mysql://127.0.0.1:3306/db2.6test
     //jdbc:mysql://mysql-176128-0.cloudclusters.net:10107/DBSALES26_G205
     // Database credentials
-    public String username = "DBADM_205";
+    public String username = "root";
     // DBADM_205
     // root
-    public String password = "DLSU1234!";
+    public String password = "root1234";
     // DLSU1234!
     // root1234
 
@@ -78,7 +78,13 @@ public class sales {
                 pstmt.executeQuery();
                 pstmt.close();
 
-                String getMaxOrderNumberSQL = "SELECT MAX(orderNumber) + 1 FROM orders";
+                // lock orders_audit
+                String lockOrdersAuditSQL = "SELECT * FROM orders_audit FOR SHARE";
+                pstmt = conn.prepareStatement(lockOrdersAuditSQL);
+                pstmt.executeQuery();
+                pstmt.close();
+
+                String getMaxOrderNumberSQL = "SELECT MAX(orderNumber) + 1 FROM orders_audit";
                 pstmt = conn.prepareStatement(getMaxOrderNumberSQL);
                 rs = pstmt.executeQuery();
                 if (rs.next()) {
@@ -87,12 +93,13 @@ public class sales {
                 rs.close();
                 pstmt.close();
 
-                System.out.println("AYO" + newOrderNumber_var);
+                //System.out.println("AYO" + newOrderNumber_var);
 
                 if (newOrderNumber_var == 0) {
                     newOrderNumber_var = 9001;
                 }
 
+                //System.out.println("New Order Number: " + newOrderNumber_var);
                 String insertOrderSQL = "INSERT INTO orders (orderNumber, orderDate, requiredDate, status, customerNumber) VALUES (?, NOW(), ?, 'In Process', ?)";
                 pstmt = conn.prepareStatement(insertOrderSQL);
                 pstmt.setInt(1, newOrderNumber_var);
@@ -102,6 +109,13 @@ public class sales {
                 pstmt.close();
             } else {
                 // Check if order exists
+
+                // lock orders
+                String lockOrdersSQL = "SELECT * FROM orders WHERE orderNumber = ? LOCK IN SHARE MODE";
+                pstmt = conn.prepareStatement(lockOrdersSQL);
+                pstmt.setInt(1, v_orderNumber);
+                pstmt.executeQuery();
+
                 String checkOrderSQL = "SELECT COUNT(1) FROM orders WHERE orderNumber = ?";
                 pstmt = conn.prepareStatement(checkOrderSQL);
                 pstmt.setInt(1, v_orderNumber);
@@ -122,6 +136,15 @@ public class sales {
             pstmt.setString(1, v_productCode);
             pstmt.executeQuery();
             pstmt.close();
+            
+            //lock orderdetails
+            String lockOrderDetailsSQL = "SELECT * FROM orderdetails WHERE orderNumber = ? FOR UPDATE";
+            pstmt = conn.prepareStatement(lockOrderDetailsSQL);
+            pstmt.setInt(1, newOrderNumber_var);
+            pstmt.executeQuery();
+            pstmt.close();
+            
+        /*
 
             // Generate entry to orderdetails
             String getMaxOrderLineNumberSQL = "SELECT MAX(orderLineNumber) + 1 FROM orderdetails WHERE orderNumber = ?";
@@ -138,13 +161,21 @@ public class sales {
                 orderLineNumber_var = 1;
             }
 
-            String insertOrderDetailsSQL = "INSERT INTO orderdetails (orderNumber, productCode, quantityOrdered, priceEach, orderLineNumber) VALUES (?, ?, ?, ?, ?)";
+        */
+
+            //System.out.println("Order Line Number: " + orderLineNumber_var);
+            //System.out.println("Order Number: " + newOrderNumber_var);
+            //System.out.println("Product Code: " + v_productCode);
+            //System.out.println("Quantity Ordered: " + v_quantityOrdered);
+            //System.out.println("Price Each: " + v_priceEach);
+
+            String insertOrderDetailsSQL = "INSERT INTO orderdetails (orderNumber, productCode, quantityOrdered, priceEach) VALUES (?, ?, ?, ?)";
             pstmt = conn.prepareStatement(insertOrderDetailsSQL);
             pstmt.setInt(1, newOrderNumber_var);
             pstmt.setString(2, v_productCode);
             pstmt.setInt(3, v_quantityOrdered);
             pstmt.setDouble(4, v_priceEach);
-            pstmt.setInt(5, orderLineNumber_var);
+            //pstmt.setInt(5, orderLineNumber_var);
             pstmt.executeUpdate();
             pstmt.close();
 
@@ -496,11 +527,12 @@ private int deleteOrder(int v_orderNumber, int v_orderLineNumber) {
             pstmt.executeQuery();
             pstmt.close();
             
-            String deleteOrderSQL = "DELETE FROM orders WHERE orderNumber = ?";
-            pstmt = conn.prepareStatement(deleteOrderSQL);
-            pstmt.setInt(1, v_orderNumber);
-            pstmt.executeUpdate();
-            pstmt.close();
+            // Update the order's status to "Cancelled" instead of deleting it
+    String updateOrderStatusSQL = "UPDATE orders SET status = 'Cancelled' WHERE orderNumber = ?";
+    pstmt = conn.prepareStatement(updateOrderStatusSQL);
+    pstmt.setInt(1, v_orderNumber);
+    pstmt.executeUpdate();
+    pstmt.close();
         }
 
         // Delay to capture possible conflicts
