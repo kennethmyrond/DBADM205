@@ -309,7 +309,7 @@ public class employees {
             int count = rs.getInt(1);
 
             if (count > 0) {
-                String insertAssignmentSql = "CALL add_SalesRepAssignments(?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                String insertAssignmentSql = "CALL add_salesRepAssignments(?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 PreparedStatement pstmt1 = conn.prepareStatement(insertAssignmentSql);
                 pstmt1.setInt(1, employeeID);
                 pstmt1.setInt(2, officeCode);
@@ -396,6 +396,19 @@ public class employees {
                       "FROM salesRepAssignments sra\r\n" +
                       "JOIN employees e ON e.employeeNumber = sra.salesManagerNumber\r\n" +
                       "JOIN employees em ON em.employeeNumber = sra.employeeNumber\r\n";
+                      String condition = "";
+            switch (range) {
+                case 0:
+                    condition = "WHERE (sra.endDate IS NULL OR sra.endDate >= CURDATE()) \r\n";
+                    break;
+                case 1:
+                    condition = "WHERE sra.endDate < CURDATE() \r\n";
+                    break;
+                case 2:
+                    // No additional condition needed for case 2
+                    break;
+            }
+            sql = baseSql + condition + "LOCK IN SHARE MODE;";
         } else if (recordType == 1) {
             System.out.println("Enter Employee ID:");
             int employeeID = Integer.parseInt(sc.nextLine());
@@ -414,21 +427,20 @@ public class employees {
                       "FROM salesRepAssignments sra\r\n" +
                       "JOIN employees e ON e.employeeNumber = sra.salesManagerNumber\r\n" +
                       "WHERE sra.employeeNumber = ?\r\n";
+                      String condition = "";
+                      switch (range) {
+                          case 0:
+                              condition = "WHERE (sra.endDate IS NULL OR sra.endDate >= CURDATE()) \r\n";
+                              break;
+                          case 1:
+                              condition = "WHERE sra.endDate < CURDATE() \r\n";
+                              break;
+                          case 2:
+                              // No additional condition needed for case 2
+                              break;
+                      }
+                      sql = baseSql + condition + "LOCK IN SHARE MODE;";
         }
-
-        String condition = "";
-        switch (range) {
-            case 0:
-                condition = "WHERE (sra.endDate IS NULL OR sra.endDate >= CURDATE()) \r\n";
-                break;
-            case 1:
-                condition = "WHERE sra.endDate < CURDATE() \r\n";
-                break;
-            case 2:
-                // No additional condition needed for case 2
-                break;
-        }
-        sql = baseSql + condition + "LOCK IN SHARE MODE;";
 
         Connection conn = null;
         PreparedStatement pstmt = null;
