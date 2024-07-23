@@ -172,6 +172,7 @@ public class sales {
         }
     }
 
+    /*
 
 public int updateOrderProduct() {
     Scanner scanner = new Scanner(System.in);
@@ -317,6 +318,330 @@ public int updateOrderProduct() {
             ex.printStackTrace();
         }
         return 0;
+    }
+}
+
+*/
+
+public int updateOrderProduct() {
+    Scanner scanner = new Scanner(System.in);
+
+    // Get user inputs
+    System.out.print("Enter Order Number: ");
+    int v_orderNumber = scanner.nextInt();
+    scanner.nextLine();  // Consume newline
+
+    System.out.print("Enter Order Line Number: ");
+    int v_orderLineNumber = scanner.nextInt();
+
+    System.out.print("Enter 1 to delete the order, 0 to update the order: ");
+    int action = scanner.nextInt();
+    scanner.nextLine();  // Consume newline
+
+    if (action == 1) {
+        scanner.close();
+        return deleteOrder(v_orderNumber, v_orderLineNumber);
+    } else {
+        System.out.print("Enter New Quantity (or -1 to leave unchanged): ");
+        int v_quantityOrdered = scanner.nextInt();
+
+        System.out.print("Enter New Price (or -1 to leave unchanged): ");
+        double v_priceEach = scanner.nextDouble();
+        scanner.nextLine();  // Consume newline
+
+        System.out.print("Enter User Name: ");
+        String v_endusername = scanner.nextLine();
+
+        System.out.print("Enter Update Reason: ");
+        String v_enduserreason = scanner.nextLine();
+        scanner.close();
+
+        return updateOrder(v_orderNumber, v_orderLineNumber, v_quantityOrdered, v_priceEach, v_endusername, v_enduserreason);
+    }
+}
+
+private int deleteOrder(int v_orderNumber, int v_orderLineNumber) {
+    Connection conn = null;
+    PreparedStatement pstmt = null;
+    ResultSet rs = null;
+    int nestedCall = 0;
+
+    try {
+        conn = DriverManager.getConnection(url, username, password);
+        conn.setAutoCommit(false);
+
+        // Check for nested calls
+        String checkNestedCallSQL = "SELECT COUNT(1) FROM information_schema.innodb_trx WHERE trx_mysql_thread_id = CONNECTION_ID()";
+        pstmt = conn.prepareStatement(checkNestedCallSQL);
+        rs = pstmt.executeQuery();
+        if (rs.next()) {
+            nestedCall = rs.getInt(1);
+        }
+        rs.close();
+        pstmt.close();
+
+        if (nestedCall == 0) {
+            conn.setAutoCommit(false);
+        }
+
+        // Get current status of the order
+        String getStatusSQL = "SELECT getCurrentStatus(?) AS status";
+        pstmt = conn.prepareStatement(getStatusSQL);
+        pstmt.setInt(1, v_orderNumber);
+        rs = pstmt.executeQuery();
+
+        String status_var = "";
+        if (rs.next()) {
+            status_var = rs.getString("status");
+        }
+        rs.close();
+        pstmt.close();
+
+        // Prevent the deletion of the order if not In Process
+        if (!"In Process".equals(status_var)) {
+            System.out.println("ERROR 91C1: Cannot delete order that is not In Process.");
+            return 0;
+        }
+        
+        // Lock the row for update in orderdetails
+        String selectOrderProductForUpdateSQL = "SELECT * FROM orderdetails WHERE orderNumber = ? AND orderLineNumber = ? FOR UPDATE";
+        pstmt = conn.prepareStatement(selectOrderProductForUpdateSQL);
+        pstmt.setInt(1, v_orderNumber);
+        pstmt.setInt(2, v_orderLineNumber);
+        pstmt.executeQuery();
+        pstmt.close();
+
+        // return the quantity ordered into current_products
+        String getProductCodeSQL = "SELECT productCode, quantityOrdered FROM orderdetails WHERE orderNumber = ? AND orderLineNumber = ?";
+        pstmt = conn.prepareStatement(getProductCodeSQL);
+        pstmt.setInt(1, v_orderNumber);
+        pstmt.setInt(2, v_orderLineNumber);
+        rs = pstmt.executeQuery();
+
+        String productCode_var = null;
+        int quantityOrdered = 0;
+        if (rs.next()) {
+            productCode_var = rs.getString("productCode");
+            quantityOrdered = rs.getInt("quantityOrdered");
+        } else {
+            System.out.println("No product code found for the given order number and line number.");
+            return 0;
+        }
+
+        rs.close();
+
+        // Lock the row for update in current_products
+        String selectForUpdateSQL = "SELECT * FROM current_products WHERE productCode = ? FOR UPDATE";
+        pstmt = conn.prepareStatement(selectForUpdateSQL);
+        pstmt.setString(1, productCode_var);
+        pstmt.executeQuery();
+        pstmt.close();
+
+        // Update the quantity in current_products
+        String updateCurrentProductsSQL = "UPDATE current_products SET quantityInStock = quantityInStock + ? WHERE productCode = ?";
+        pstmt = conn.prepareStatement(updateCurrentProductsSQL);
+        pstmt.setInt(1, quantityOrdered);
+        pstmt.setString(2, productCode_var);
+        pstmt.executeUpdate();
+        pstmt.close();
+
+        // Delete the order details
+        String deleteOrderDetailsSQL = "DELETE FROM orderdetails WHERE orderNumber = ? AND orderLineNumber = ?";
+        pstmt = conn.prepareStatement(deleteOrderDetailsSQL);
+        pstmt.setInt(1, v_orderNumber);
+        pstmt.setInt(2, v_orderLineNumber);
+        int rowsDeleted = pstmt.executeUpdate();
+        pstmt.close();
+
+        if (rowsDeleted == 0) {
+            System.out.println("Order detail not found for deletion!");
+            conn.rollback();
+            return 0;
+        }
+
+        // Optionally, you may also want to delete the order from the orders table if there are no more order details for this order number
+        String checkRemainingOrderDetailsSQL = "SELECT COUNT(*) FROM orderdetails WHERE orderNumber = ?";
+        pstmt = conn.prepareStatement(checkRemainingOrderDetailsSQL);
+        pstmt.setInt(1, v_orderNumber);
+        rs = pstmt.executeQuery();
+        int remainingOrderDetails = 0;
+        if (rs.next()) {
+            remainingOrderDetails = rs.getInt(1);
+        }
+        rs.close();
+        pstmt.close();
+
+        if (remainingOrderDetails == 0) {
+
+            // Lock the row for update in orders
+            String selectOrderForUpdateSQL = "SELECT * FROM orders WHERE orderNumber = ? FOR UPDATE";
+            pstmt = conn.prepareStatement(selectOrderForUpdateSQL);
+            pstmt.setInt(1, v_orderNumber);
+            pstmt.executeQuery();
+            pstmt.close();
+            
+            String deleteOrderSQL = "DELETE FROM orders WHERE orderNumber = ?";
+            pstmt = conn.prepareStatement(deleteOrderSQL);
+            pstmt.setInt(1, v_orderNumber);
+            pstmt.executeUpdate();
+            pstmt.close();
+        }
+
+        if (nestedCall == 0) {
+            conn.commit();
+        }
+        System.out.println("Order deleted successfully!");
+        return 1;
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+        // Handle rollback with the same connection instance used for the transaction
+        try {
+            if (conn != null) {
+                conn.rollback();
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+        return 0;
+    } finally {
+        // Close resources
+        try {
+            if (rs != null) rs.close();
+            if (pstmt != null) pstmt.close();
+            if (conn != null) conn.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+private int updateOrder(int v_orderNumber, int v_orderLineNumber, int v_quantityOrdered, double v_priceEach, String v_endusername, String v_enduserreason) {
+    Connection conn = null;
+    PreparedStatement pstmt = null;
+    ResultSet rs = null;
+    int nestedCall = 0;
+    String productCode_var = null;
+
+    // Perform the update operation
+    try {
+        conn = DriverManager.getConnection(url, username, password);
+        conn.setAutoCommit(false);
+
+        // Check for nested calls
+        String checkNestedCallSQL = "SELECT COUNT(1) FROM information_schema.innodb_trx WHERE trx_mysql_thread_id = CONNECTION_ID()";
+        pstmt = conn.prepareStatement(checkNestedCallSQL);
+        rs = pstmt.executeQuery();
+        if (rs.next()) {
+            nestedCall = rs.getInt(1);
+        }
+        rs.close();
+        pstmt.close();
+
+        if (nestedCall == 0) {
+            conn.setAutoCommit(false);
+        }
+
+        // Get productCode from table
+        String getProductCodeSQL = "SELECT productCode FROM orderdetails WHERE orderNumber = ? AND orderLineNumber = ?";
+        pstmt = conn.prepareStatement(getProductCodeSQL);
+        pstmt.setInt(1, v_orderNumber);
+        pstmt.setInt(2, v_orderLineNumber);
+        rs = pstmt.executeQuery();
+
+        if (rs.next()) {
+            productCode_var = rs.getString("productCode");
+        } else {
+            System.out.println("No product code found for the given order number and line number.");
+            return 0;
+        }
+        rs.close();
+        pstmt.close();
+
+        // Lock the row for update in orderdetails
+        String selectOrderForUpdateSQL = "SELECT quantityOrdered, priceEach FROM orderdetails WHERE orderNumber = ? AND orderLineNumber = ? FOR UPDATE";
+        pstmt = conn.prepareStatement(selectOrderForUpdateSQL);
+        pstmt.setInt(1, v_orderNumber);
+        pstmt.setInt(2, v_orderLineNumber);
+        pstmt.executeQuery();
+        pstmt.close();
+
+        // Lock the row for update in current_products
+        String selectForUpdateSQL = "SELECT * FROM current_products WHERE productCode = ? FOR UPDATE";
+        pstmt = conn.prepareStatement(selectForUpdateSQL);
+        pstmt.setString(1, productCode_var);
+        pstmt.executeQuery();
+        pstmt.close();
+
+        // Prepare update order details statement
+        StringBuilder updateOrderDetailsSQL = new StringBuilder("UPDATE orderdetails SET ");
+        boolean commaNeeded = false;
+        if (v_quantityOrdered != -1) {
+            updateOrderDetailsSQL.append("quantityOrdered = ?, ");
+            commaNeeded = true;
+        }
+        if (v_priceEach != -1.0) {
+            updateOrderDetailsSQL.append("priceEach = ?, ");
+            commaNeeded = true;
+        }
+        updateOrderDetailsSQL.append("end_username = ?, end_userreason = ? WHERE orderNumber = ? AND productCode = ? AND orderLineNumber = ?");
+
+        pstmt = conn.prepareStatement(updateOrderDetailsSQL.toString());
+
+        int paramIndex = 1;
+        if (v_quantityOrdered != -1) {
+            pstmt.setInt(paramIndex++, v_quantityOrdered);
+        }
+        if (v_priceEach != -1.0) {
+            pstmt.setDouble(paramIndex++, v_priceEach);
+        }
+        pstmt.setString(paramIndex++, v_endusername);
+        pstmt.setString(paramIndex++, v_enduserreason);
+        pstmt.setInt(paramIndex++, v_orderNumber);
+        pstmt.setString(paramIndex++, productCode_var);
+        pstmt.setInt(paramIndex, v_orderLineNumber);
+        int rowsUpdated = pstmt.executeUpdate();
+        pstmt.close();
+
+        if (rowsUpdated == 0) {
+            System.out.println("Order detail not found for update!");
+            conn.rollback();
+            return 0;
+        }
+
+        // Delay to capture possible conflicts
+        String delaySQL = "SELECT SLEEP(3)";
+        pstmt = conn.prepareStatement(delaySQL);
+        pstmt.executeQuery();
+        pstmt.close();
+
+        if (nestedCall == 0) {
+            conn.commit();
+        }
+
+        System.out.println("Order product updated!");
+        return 1;
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+        // Handle rollback with the same connection instance used for the transaction
+        try {
+            if (conn != null) {
+                conn.rollback();
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+        return 0;
+    } finally {
+        // Close resources
+        try {
+            if (rs != null) rs.close();
+            if (pstmt != null) pstmt.close();
+            if (conn != null) conn.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }
 
