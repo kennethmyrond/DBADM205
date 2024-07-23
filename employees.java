@@ -169,7 +169,7 @@ public class employees {
             sleeppstmt = conn.prepareStatement("SELECT SLEEP (3)");
             sleeppstmt.executeQuery();
 
-            //System.out.println(pstmt);
+            System.out.println(pstmt);
 
             pstmt.execute();
             pstmt.close();
@@ -183,6 +183,7 @@ public class employees {
         }
         return 0;
     }
+
 
     public int resignEmployee() {
         Scanner sc = new Scanner(System.in);
@@ -299,7 +300,7 @@ public class employees {
             quota = sc.nextInt();
 
             System.out.println("Enter Sales Manager ID:");
-            salesManagerNumber = Integer.parseInt(sc.nextLine());
+            salesManagerNumber = sc.nextInt();
 
             String checkSql = "SELECT COUNT(*) FROM employees WHERE employeeNumber = ?";
             pstmt = conn.prepareStatement(checkSql);
@@ -366,7 +367,6 @@ public class employees {
             } catch (SQLException e) {
                 System.out.println("Error closing resources: " + e.getMessage());
             }
-            sc.close();
         }
     }
 
