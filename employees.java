@@ -184,41 +184,55 @@ public class employees {
         return 0;
     }
 
-    public int resignEmployee()     {
-    	Scanner sc = new Scanner(System.in);
-    	
+    public int resignEmployee() {
+        Scanner sc = new Scanner(System.in);
+    
         System.out.println("Enter Employee Number To Resign:");
-        employeeID = sc.nextInt();
+        int employeeID = sc.nextInt();
         sc.nextLine(); // Consume newline
-        
+    
+        System.out.println("Enter End Username:");
+        String endUsername = sc.nextLine();
+    
+        System.out.println("Enter End User Reason:");
+        String endUserReason = sc.nextLine();
+    
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+    
         try {
-            Connection conn;
             conn = DriverManager.getConnection(url, username, password);
             System.out.println("Connection Successful");
-            conn.setAutoCommit(false);
-
-            String sql = "{CALL deactivateEmployee(?, ?, ?)}"; 
-            PreparedStatement pstmt = conn.prepareStatement(sql);
-
+            // conn.setAutoCommit(false);
+    
+            String sql = "{CALL deactivateEmployee(?, ?, ?)}";
+            pstmt = conn.prepareStatement(sql);
+    
             pstmt.setInt(1, employeeID);
             pstmt.setString(2, endUsername);
             pstmt.setString(3, endUserReason);
-            
+    
             System.out.println("Press Enter to Resign Employee");
             sc.nextLine();
-
+    
             pstmt.executeUpdate();
-            pstmt.close();
-            conn.commit();
-            conn.close();
+            // conn.commit();
             System.out.println("Employee has Resigned!");
+    
             return 1;
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
+        } catch (SQLException e) {
+            System.out.println("Error: " + e.getMessage());
             return 0;
-        } 
+        } finally {
+            try {
+                if (pstmt != null) pstmt.close();
+                if (conn != null) conn.close();
+            } catch (SQLException se) {
+                se.printStackTrace();
+            }
+        }
     }
-
+    
     public int createSalesRepAssign() {
         Scanner sc = new Scanner(System.in);
         int employeeID;
@@ -226,7 +240,7 @@ public class employees {
         String startDate;
         String endDate;
         String reason;
-        int quota = 10000;
+        int quota;
         String end_username = "DBADMIN205@S17";
         String end_userreason = "Test";
         int salesManagerNumber;
@@ -281,9 +295,11 @@ public class employees {
             System.out.println("Enter reason:");
             reason = sc.nextLine();
 
+            System.out.println("Enter Quota:");
+            quota = sc.nextInt();
+
             System.out.println("Enter Sales Manager ID:");
             salesManagerNumber = Integer.parseInt(sc.nextLine());
-
 
             String checkSql = "SELECT COUNT(*) FROM employees WHERE employeeNumber = ?";
             pstmt = conn.prepareStatement(checkSql);
@@ -293,7 +309,7 @@ public class employees {
             int count = rs.getInt(1);
 
             if (count > 0) {
-                String insertAssignmentSql = "INSERT INTO salesRepAssignments (employeeNumber, officeCode, startDate, endDate, reason, quota, salesManagerNumber, end_username, end_userreason) " + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                String insertAssignmentSql = "CALL add_SalesRepAssignments(?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 PreparedStatement pstmt1 = conn.prepareStatement(insertAssignmentSql);
                 pstmt1.setInt(1, employeeID);
                 pstmt1.setInt(2, officeCode);
@@ -305,18 +321,21 @@ public class employees {
                 pstmt1.setString(8, end_username);
                 pstmt1.setString(9, end_userreason);
 
+                System.out.println("Press Enter to Start Adding Employee");
+                sc.nextLine();
+
                 pstmt1.executeUpdate();
 
-                String insertRepSql = "INSERT INTO salesRepresentatives (employeeNumber, end_username, end_userreason) " + "VALUES (?, ?, ?)";
-                PreparedStatement pstmt2 = conn.prepareStatement(insertRepSql);
-                pstmt2.setInt(1, employeeID);
-                pstmt2.setString(2, end_username);
-                pstmt2.setString(3, end_userreason);
+                // String insertRepSql = "INSERT INTO salesRepresentatives (employeeNumber, end_username, end_userreason) " + "VALUES (?, ?, ?)";
+                // PreparedStatement pstmt2 = conn.prepareStatement(insertRepSql);
+                // pstmt2.setInt(1, employeeID);
+                // pstmt2.setString(2, end_username);
+                // pstmt2.setString(3, end_userreason);
 
-                pstmt2.executeUpdate();
+                // pstmt2.executeUpdate();
 
                 pstmt1.close();
-                pstmt2.close();
+                // pstmt2.close();
                 conn.commit();
 
                 System.out.println("SalesRepAssignment Inserted Successfully");
@@ -1196,7 +1215,6 @@ public class employees {
                                "  [1] - EMPLOYEE \n" +
                                "  [2] - SALES REPRESENTATIVE\n" +
                                "  [3] - DEPARTMENTS \n" +
-                               "  [4] - OFFICES \n" +
                                "  [0] - Exit");
 
             choice = sc.nextInt();
@@ -1328,9 +1346,6 @@ public class employees {
                         }
 
                     } while (departmentChoice != 0);
-                    break;
-                case 4: //offices
-                    
                     break;
                 
                 case 0:
