@@ -104,12 +104,12 @@ public class employees {
         Scanner sc = new Scanner(System.in);
         int employeeID;
         int deptCode = 0;
-
         Connection conn = null;
         PreparedStatement pstmt = null;
-        PreparedStatement sleeppstmt = null;
         ResultSet rs = null;
-        
+
+        PreparedStatement sleeppstmt = null;
+
         try {
             System.out.println("Enter Employee ID:");
             employeeID = Integer.parseInt(sc.nextLine());
@@ -117,13 +117,10 @@ public class employees {
             conn = DriverManager.getConnection(url, username, password);
             conn.setAutoCommit(false);
 
-            String lockSql = "SELECT * FROM employees WHERE employeeNumber = ? FOR UPDATE";
+            String lockSql = "SELECT * FROM employees WHERE employeeNumber = ?";
             pstmt = conn.prepareStatement(lockSql);
             pstmt.setInt(1, employeeID);
             rs = pstmt.executeQuery();
-            
-            sleeppstmt = conn.prepareStatement("SELECT SLEEP (3)");
-            sleeppstmt.executeQuery();
 
             if (!rs.next()) {
                 System.out.println("Employee does not exist.");
@@ -131,7 +128,6 @@ public class employees {
                 return 0;
             }
 
-            
             System.out.println("Enter Type: \n  [1] - Reclassify to Inventory Manager \n  [2] - Reclassify to Sales Manager \n  [3] - Reclassify to Sales Representative \n");
             int tempChoice = Integer.parseInt(sc.nextLine());
 
@@ -170,35 +166,20 @@ public class employees {
             System.out.println("Press Enter to Start Reclassifying Employee");
             sc.nextLine();
 
-            pstmt.executeQuery();
+            sleeppstmt = conn.prepareStatement("SELECT SLEEP (3)");
+            sleeppstmt.executeQuery();
+
+            System.out.println(pstmt);
+
+            pstmt.execute();
             pstmt.close();
-            conn.commit();
             conn.close();
             sleeppstmt.close();
             System.out.println("Employee reclassified successfully.");
 
-        } catch (SQLException e) {
-            System.out.println("SQL Error: " + e.getMessage());
-            if (conn != null) {
-                try {
-                    conn.rollback();
-                } catch (SQLException rollbackEx) {
-                    System.out.println("Rollback Error: " + rollbackEx.getMessage());
-                }
-            }
+        }  catch (Exception e) {
+            System.out.println(e.getMessage());
             return 0;
-        } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
-            return 0;
-        } finally {
-            try {
-                if (rs != null) rs.close();
-                if (pstmt != null) pstmt.close();
-                if (conn != null) conn.close();
-            } catch (SQLException e) {
-                System.out.println("Error closing resources: " + e.getMessage());
-            }
-            sc.close();
         }
         return 0;
     }
@@ -237,17 +218,18 @@ public class employees {
             return 0;
         } 
     }
-/* 
-    public int createSalesRepAssign(int salesManagerNumber) {
+
+    public int createSalesRepAssign() {
         Scanner sc = new Scanner(System.in);
         int employeeID;
         int officeCode;
-        LocalDate startDate = LocalDate.now();
-        LocalDate endDate;
+        String startDate;
+        String endDate;
         String reason;
         int quota = 10000;
         String end_username = "DBADMIN205@S17";
         String end_userreason = "Test";
+        int salesManagerNumber;
 
         Connection conn = null;
         PreparedStatement pstmt = null;
@@ -267,7 +249,7 @@ public class employees {
             while (rs.next()) {
                 int empNumber = rs.getInt("employeeNumber");
 
-                String detailsSql = "SELECT * FROM employees WHERE employeeNumber = ? FOR UPDATE";
+                String detailsSql = "SELECT * FROM employees WHERE employeeNumber = ?";
                 PreparedStatement detailsPstmt = conn.prepareStatement(detailsSql);
                 detailsPstmt.setInt(1, empNumber);
                 ResultSet detailsRs = detailsPstmt.executeQuery();
@@ -290,14 +272,20 @@ public class employees {
             System.out.println("Enter Office Code:");
             officeCode = Integer.parseInt(sc.nextLine());
 
+            System.out.println("Enter Start Date Assignment [YYYY-MM-DD]:");
+            startDate = sc.nextLine();
+
             System.out.println("Enter End Date Assignment [YYYY-MM-DD]:");
-            endDate = LocalDate.parse(sc.nextLine());
+            endDate = sc.nextLine();
 
             System.out.println("Enter reason:");
             reason = sc.nextLine();
 
+            System.out.println("Enter Sales Manager ID:");
+            salesManagerNumber = Integer.parseInt(sc.nextLine());
 
-            String checkSql = "SELECT COUNT(*) FROM employees WHERE employeeNumber = ? FOR UPDATE";
+
+            String checkSql = "SELECT COUNT(*) FROM employees WHERE employeeNumber = ?";
             pstmt = conn.prepareStatement(checkSql);
             pstmt.setInt(1, employeeID);
             rs = pstmt.executeQuery();
@@ -309,8 +297,8 @@ public class employees {
                 PreparedStatement pstmt1 = conn.prepareStatement(insertAssignmentSql);
                 pstmt1.setInt(1, employeeID);
                 pstmt1.setInt(2, officeCode);
-                pstmt1.setDate(3, java.sql.Date.valueOf(startDate));
-                pstmt1.setDate(4, java.sql.Date.valueOf(endDate));
+                pstmt1.setString(3, startDate);
+                pstmt1.setString(4, startDate);
                 pstmt1.setString(5, reason);
                 pstmt1.setInt(6, quota);
                 pstmt1.setInt(7, salesManagerNumber);
@@ -362,7 +350,7 @@ public class employees {
             sc.close();
         }
     }
-*/
+
     public int viewSalesRepDetails() {
         Scanner sc = new Scanner(System.in);
         String sql = null;
@@ -496,7 +484,7 @@ public class employees {
             }
         }
     }
-    
+
     public int viewEmployee()     {
         Scanner sc = new Scanner(System.in);
 
@@ -511,39 +499,42 @@ public class employees {
             String sql;
             PreparedStatement pstmt;
 
-                if (employeeID == 0) {
-                    sql = "SELECT * FROM employees LOCK IN SHARE MODE";
-                    pstmt = conn.prepareStatement(sql);
-                } else {
-                    sql = "SELECT * FROM employees WHERE employeeNumber = ? LOCK IN SHARE MODE";
-                    pstmt = conn.prepareStatement(sql);
-                    pstmt.setInt(1, employeeID);
-                }
+            if (employeeID == 0) {
+                sql = "SELECT * FROM employees LOCK IN SHARE MODE";
+                pstmt = conn.prepareStatement(sql);
+            } else {
+                sql = "SELECT * FROM employees WHERE employeeNumber = ? LOCK IN SHARE MODE";
+                pstmt = conn.prepareStatement(sql);
+                pstmt.setInt(1, employeeID);
+            }
 
             System.out.println("Press Enter to Start Viewing the Employee(s)");
             sc.nextLine();
 
             ResultSet rs = pstmt.executeQuery();
 
-            pstmt.close();
             conn.commit();
             conn.close();
 
-                if (employeeID == 0) {
-                    employeeTableHeader();
-                    while (rs.next()) {
-                        employeeTableRow(rs);
-                    }
-                } else {
-                    if (rs.next()) {
-                        employeeTableHeader();
-                        employeeTableRow(rs);
-                    } else {
-                        System.out.println("Employee does not exist.");
-                    }
+            if (employeeID == 0) {
+                employeeTableHeader();
+                while (rs.next()) {
+                    employeeTableRow(rs);
                 }
+            } else {
+                if (rs.next()) {
+                    employeeTableHeader();
+                    employeeTableRow(rs);
+                } else {
+                    System.out.println("Employee does not exist.");
+                }
+            }
+
             rs.close();
+            pstmt.close();
+
             return 1;
+
         } catch (Exception e) {
             System.out.println(e.getMessage());
             return 0;
@@ -570,6 +561,153 @@ public class employees {
         System.out.format("| %-9d | %-13s | %-16s | %-9s | %-35s | %-21s | %-8s | %-5d |\n",
                 employeeID, lastName, firstName, extension, email, jobTitle, employee_type, is_deactivated);
         System.out.println("---------------------------------------------------------------------------------------------------------------------------------------------");
+    }
+
+    public int modifySalesRepAssign() {
+        Scanner sc = new Scanner(System.in);
+
+        System.out.println("Enter Employee ID:");
+        int employeeID = Integer.parseInt(sc.nextLine());
+
+        Connection conn = null;
+        PreparedStatement fetchPstmt = null;
+        PreparedStatement updatePstmt = null;
+        PreparedStatement jobTitlesPstmt = null;
+        ResultSet rs = null;
+        ResultSet jobTitlesRs = null;
+
+
+        try {
+            conn = DriverManager.getConnection(url, username, password);
+            System.out.println("Connection Successful");
+            conn.setAutoCommit(false);
+
+            String fetchSql = "SELECT * FROM salesRepAssignments WHERE employeeNumber = ? FOR UPDATE";
+            fetchPstmt = conn.prepareStatement(fetchSql);
+            fetchPstmt.setInt(1, employeeID);
+
+            System.out.println("Press enter key to start retrieving the data");
+            sc.nextLine();
+
+            rs = fetchPstmt.executeQuery();
+            if (rs.next()) {
+                int officeCode = rs.getInt("officeCode");
+                String startDate = rs.getString("startDate");
+                String endDate = rs.getString("endDate");
+                String reason = rs.getString("reason");
+                String quota = rs.getInt("quota");
+                String currentJobTitle = rs.getString("jobTitle");
+
+                System.out.println("Current Details:");
+                System.out.println("Extension: " + currentExtension);
+                System.out.println("Email: " + currentEmail);
+                System.out.println("Job Title: " + currentJobTitle);
+            } else {
+                System.out.println("No employee found with the given ID.");
+                return 1;
+            }
+            rs.close();
+
+            fetchPstmt = conn.prepareStatement("SELECT SLEEP (3)");
+            fetchPstmt.executeQuery();
+
+            fetchPstmt.close();
+
+            int empDetail;
+            // do {
+            // Displaying the menu options to the user
+            System.out.println("\nSelect Employee Detail To Edit: \n" +
+                    "  [1] - Extension \n" +
+                    "  [2] - Email \n" +
+                    "  [3] - Job Title \n" +
+                    "  [9] - EXIT");
+
+            empDetail = sc.nextInt();
+            sc.nextLine(); // Consume the newline character
+
+            String updateSql = null;
+            switch (empDetail) {
+                case 1:
+                    System.out.println("Enter New Extension:");
+                    String newExtension = sc.nextLine();
+
+                    updateSql = "UPDATE employees SET extension = ? WHERE employeeNumber = ?";
+                    updatePstmt = conn.prepareStatement(updateSql);
+                    updatePstmt.setString(1, newExtension);
+                    updatePstmt.setInt(2, employeeID);
+                    break;
+                case 2:
+                    System.out.println("Enter New Email:");
+                    String newEmail = sc.nextLine();
+
+                    updateSql = "UPDATE employees SET email = ? WHERE employeeNumber = ?";
+                    updatePstmt = conn.prepareStatement(updateSql);
+                    updatePstmt.setString(1, newEmail);
+                    updatePstmt.setInt(2, employeeID);
+                    break;
+                case 3:
+                    System.out.println("Available Job Titles:");
+                    String jobTitlesSql = "SELECT jobTitle FROM employees_jobTitles LOCK IN SHARE MODE;";
+                    jobTitlesPstmt = conn.prepareStatement(jobTitlesSql);
+                    jobTitlesRs = jobTitlesPstmt.executeQuery();
+
+                    while (jobTitlesRs.next()) {
+                        System.out.println("- " + jobTitlesRs.getString("jobTitle"));
+                    }
+
+                    jobTitlesRs.close();
+                    jobTitlesPstmt.close();
+
+                    System.out.println("\nEnter New Job Title:");
+                    String newJobTitle = sc.nextLine();
+
+                    updateSql = "UPDATE employees SET jobTitle  = ? WHERE employeeNumber = ?";
+                    updatePstmt = conn.prepareStatement(updateSql);
+                    updatePstmt.setString(1, newJobTitle);
+                    updatePstmt.setInt(2, employeeID);
+                    break;
+                case 9:
+                    System.out.println("Exiting...");
+                    return 1;
+                default:
+                    System.out.println("Invalid choice, please try again.");
+                    return 1;
+            }
+
+            int rowsUpdated = updatePstmt.executeUpdate();
+            if (rowsUpdated > 0) {
+                System.out.println("Employee details updated successfully.");
+            } else {
+                System.out.println("No employee found with the given ID.");
+            }
+            updatePstmt.close();
+            // } while (empDetail != 9);
+
+            conn.commit();
+            conn.close();
+        } catch (SQLException e) {
+            System.out.println("Error updating employee details: " + e.getMessage());
+            try {
+                if (conn != null) {
+                    conn.rollback();
+                    System.out.println("Transaction rolled back.");
+                }
+            } catch (SQLException se) {
+                se.printStackTrace();
+            }
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (fetchPstmt != null) fetchPstmt.close();
+                if (updatePstmt != null) updatePstmt.close();
+                if (jobTitlesRs != null) jobTitlesRs.close();
+                if (jobTitlesPstmt != null) jobTitlesPstmt.close();
+                if (conn != null) conn.close();
+            } catch (SQLException se) {
+                se.printStackTrace();
+            }
+        }
+        return 0;
     }
 
     public int modifyEmployee() {
@@ -1110,10 +1248,13 @@ public class employees {
 
                         switch (salesRepChoice) {
                             case 1:
-                                //e.createSalesRepAssign();
+                                e.createSalesRepAssign();
                                 break;
                             case 2:
                                 e.viewSalesRepDetails();
+                                break;
+                            case 3:
+                                e.modifySalesRepDetails();
                                 break;
                             case 0:
                                 System.out.println("Returning to main menu...");
