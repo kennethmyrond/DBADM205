@@ -497,57 +497,70 @@ public class employees {
         }
     }
     
-    public int viewEmployee()     {
+    public int viewEmployee() {
         Scanner sc = new Scanner(System.in);
 
         System.out.println("Enter [0] To View All Employees \nEnter Employee ID:");
-        employeeID = Integer.parseInt(sc.nextLine());
+        int employeeID = Integer.parseInt(sc.nextLine());
+
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
 
         try {
-            Connection conn = DriverManager.getConnection(url, username, password);
+            conn = DriverManager.getConnection(url, username, password);
             System.out.println("Connection Successful");
             conn.setAutoCommit(false);
 
             String sql;
-            PreparedStatement pstmt;
 
-                if (employeeID == 0) {
-                    sql = "SELECT * FROM employees LOCK IN SHARE MODE";
-                    pstmt = conn.prepareStatement(sql);
-                } else {
-                    sql = "SELECT * FROM employees WHERE employeeNumber = ? LOCK IN SHARE MODE";
-                    pstmt = conn.prepareStatement(sql);
-                    pstmt.setInt(1, employeeID);
-                }
+            if (employeeID == 0) {
+                sql = "SELECT * FROM employees LOCK IN SHARE MODE";
+                pstmt = conn.prepareStatement(sql);
+            } else {
+                sql = "SELECT * FROM employees WHERE employeeNumber = ? LOCK IN SHARE MODE";
+                pstmt = conn.prepareStatement(sql);
+                pstmt.setInt(1, employeeID);
+            }
 
             System.out.println("Press Enter to Start Viewing the Employee(s)");
             sc.nextLine();
 
-            ResultSet rs = pstmt.executeQuery();
+            rs = pstmt.executeQuery();
 
-            pstmt.close();
-            
-
-                if (employeeID == 0) {
-                    employeeTableHeader();
-                    while (rs.next()) {
-                        employeeTableRow(rs);
-                    }
-                } else {
-                    if (rs.next()) {
-                        employeeTableHeader();
-                        employeeTableRow(rs);
-                    } else {
-                        System.out.println("Employee does not exist.");
-                    }
+            if (employeeID == 0) {
+                employeeTableHeader();
+                while (rs.next()) {
+                    employeeTableRow(rs);
                 }
+            } else {
+                if (rs.next()) {
+                    employeeTableHeader();
+                    employeeTableRow(rs);
+                } else {
+                    System.out.println("Employee does not exist.");
+                }
+            }
+
+            rs.close();
+            pstmt.close();
             conn.commit();
             conn.close();
-            rs.close();
             return 1;
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            return 0;
         } catch (Exception e) {
             System.out.println(e.getMessage());
             return 0;
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstmt != null) pstmt.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                System.out.println("Error closing resources: " + e.getMessage());
+            }
         }
     }
 
@@ -1098,7 +1111,7 @@ public class employees {
                     } while (employeeChoice != 0);
                     break;
 
-                case 2: // Sales Rep
+                case 2: // SalesRep
                     int salesRepChoice;
                     do {
                         System.out.println("Enter Activity: \n" +
@@ -1175,10 +1188,10 @@ public class employees {
 
                     } while (departmentChoice != 0);
                     break;
-                case 4: //offices
-                    
+                case 4: // Offices
+                    // Add logic for offices if needed
                     break;
-                
+
                 case 0:
                     System.out.println("Exiting the program...");
                     break;
