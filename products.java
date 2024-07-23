@@ -535,7 +535,7 @@ public class products {
             } catch (Exception e) {
                 if (conn != null) {
                     try {
-                        conn.rollback();  // Rollback transaction on error
+                        conn.rollback();
                     } catch (SQLException rollbackEx) {
                         rollbackEx.printStackTrace();
                     }
