@@ -593,7 +593,7 @@ public class products {
 
             rs = pstmt.executeQuery();
 
-            pstmt = conn.prepareStatement("SELECT SLEEP (3)");
+            pstmt = conn.prepareStatement("SELECT SLEEP (5)");
             pstmt.executeQuery();
 
             while (rs.next()) {
