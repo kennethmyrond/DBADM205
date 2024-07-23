@@ -472,7 +472,6 @@ private int deleteOrder(int v_orderNumber, int v_orderLineNumber) {
         pstmt.close();
 
         if (remainingOrderDetails == 0) {
-
             // Lock the row for update in orders
             String selectOrderForUpdateSQL = "SELECT * FROM orders WHERE orderNumber = ? FOR UPDATE";
             pstmt = conn.prepareStatement(selectOrderForUpdateSQL);
