@@ -375,11 +375,11 @@ public class employees {
         String sql = null;
         int range = 0;
         String baseSql = null;
-
+    
         // \n [1] - All Current Sales Representatives \n [2] - All Previous Sales Representatives
         System.out.println("Enter Type of Record to View: \n [0] - All Sales Representatives record \n [1] - Record of Specific Sales Rep");
         int recordType = Integer.parseInt(sc.nextLine());
-
+    
         if (recordType == 0) {
             System.out.println("Enter Range: \n [0] - Current Sales Representatives \n [1] - Previous Sales Representatives \n [2] - All Records");
             range = Integer.parseInt(sc.nextLine());
@@ -396,7 +396,8 @@ public class employees {
                       "FROM salesRepAssignments sra\r\n" +
                       "JOIN employees e ON e.employeeNumber = sra.salesManagerNumber\r\n" +
                       "JOIN employees em ON em.employeeNumber = sra.employeeNumber\r\n";
-                      String condition = "";
+    
+            String condition = "";
             switch (range) {
                 case 0:
                     condition = "WHERE (sra.endDate IS NULL OR sra.endDate >= CURDATE()) \r\n";
@@ -411,12 +412,13 @@ public class employees {
             sql = baseSql + condition + "LOCK IN SHARE MODE;";
         } else if (recordType == 1) {
             System.out.println("Enter Employee ID:");
-            int employeeID = Integer.parseInt(sc.nextLine());
-
+            employeeID = Integer.parseInt(sc.nextLine());
+    
             System.out.println("Enter Range: \n [0] - Current \n [1] - Previous \n [2] - All Assignments");
             range = Integer.parseInt(sc.nextLine());
             baseSql = "SELECT \r\n" +
                       "    sra.officeCode, \r\n" +
+                      "    em.firstName, em.lastName, \r\n" +
                       "    sra.startDate, \r\n" +
                       "    sra.endDate, \r\n" +
                       "    sra.reason, \r\n" +
@@ -426,54 +428,56 @@ public class employees {
                       "    e.lastName AS salesManagerLastName\r\n" +
                       "FROM salesRepAssignments sra\r\n" +
                       "JOIN employees e ON e.employeeNumber = sra.salesManagerNumber\r\n" +
+                      "JOIN employees em ON em.employeeNumber = sra.employeeNumber\r\n" +
                       "WHERE sra.employeeNumber = ?\r\n";
-                      String condition = "";
-                      switch (range) {
-                          case 0:
-                              condition = "WHERE (sra.endDate IS NULL OR sra.endDate >= CURDATE()) \r\n";
-                              break;
-                          case 1:
-                              condition = "WHERE sra.endDate < CURDATE() \r\n";
-                              break;
-                          case 2:
-                              // No additional condition needed for case 2
-                              break;
-                      }
-                      sql = baseSql + condition + "LOCK IN SHARE MODE;";
+    
+            String condition = "";
+            switch (range) {
+                case 0:
+                    condition = "AND (sra.endDate IS NULL OR sra.endDate >= CURDATE()) \r\n";
+                    break;
+                case 1:
+                    condition = "AND sra.endDate < CURDATE() \r\n";
+                    break;
+                case 2:
+                    // No additional condition needed for case 2
+                    break;
+            }
+            sql = baseSql + condition + "LOCK IN SHARE MODE;";
         }
-
+    
         Connection conn = null;
         PreparedStatement pstmt = null;
         ResultSet rs = null;
-
+    
         try {
             conn = DriverManager.getConnection(url, username, password);
             System.out.println("Connection Successful");
             conn.setAutoCommit(false);
-
+    
             pstmt = conn.prepareStatement(sql);
-            if (recordType == 1) pstmt.setInt(1, employeeID);
-
+            if (recordType == 1) {
+                pstmt.setInt(1, employeeID);
+            }
+    
             System.out.println("Press Enter to Start Viewing Sales Rep Assignment");
             sc.nextLine();
-
+    
             rs = pstmt.executeQuery();
-
+    
             // Print table headers
-            System.out.printf("%-15s %-15s %-20s %-20s %-15s %-15s %-15s %-20s %-20s%n",
-                              "Employee Number", "Office Code", "First Name", "Last Name", "Start Date", "End Date", "Reason", "Quota", "Sales Manager");
+            System.out.printf("%-15s %-20s %-15s %-15s %-15s %-15s %-15s %-15s %-20s%n",
+                              "Employee Number", "Employee Name", "Office Code", "Start Date", "End Date", "Reason", "Quota", "Sales Manager", "Sales Manager Name");
             System.out.println("---------------------------------------------------------------------------------------------------------------------");
-
+    
             boolean assignmentsFound = false;
-
+    
             while (rs.next()) {
                 assignmentsFound = true;
                 int employeeNumber = 0;
-                String salesRepName = null;
-                if (recordType == 0) {
-                    employeeNumber = rs.getInt("employeeNumber");
-                    salesRepName = rs.getString("firstName") + ' ' + rs.getString("lastName");
-                }
+                if(recordType == 0) employeeNumber = rs.getInt("employeeNumber");
+                if(recordType == 1) employeeNumber = employeeID;
+                String empname = rs.getString("firstName") + ' ' +rs.getString("lastName");   
                 String officeCode = rs.getString("officeCode");
                 String startDate = rs.getString("startDate");
                 String endDate = rs.getString("endDate");
@@ -481,27 +485,22 @@ public class employees {
                 double quota = rs.getDouble("quota");
                 int salesManagerNumber = rs.getInt("salesManagerNumber");
                 String salesManagerName = rs.getString("salesManagerFirstName") + ' ' + rs.getString("salesManagerLastName");
-
-                if (recordType == 0) {
-                    System.out.printf("%-15d %-15s %-20s %-20s %-15s %-15s %-15s %-20.2f %-20s%n",
-                                      employeeNumber, officeCode, rs.getString("firstName"), rs.getString("lastName"), startDate, endDate, reason, quota, salesManagerName);
-                } else {
-                    System.out.printf("%-15s %-15s %-15s %-15s %-20.2f %-20s%n",
-                                      officeCode, startDate, endDate, reason, quota, salesManagerName);
-                }
+    
+                System.out.printf("%-15d %-20s %-15s %-15s %-15s %-15s %-15s %-15d %-20s%n",
+                                  employeeNumber,empname, officeCode, startDate, endDate, reason, quota, salesManagerNumber, salesManagerName);
             }
-
+    
             if (!assignmentsFound) {
                 System.out.println("No records found");
             }
-
+    
             rs.close();
             pstmt.close();
             conn.commit();
             conn.close();
-
+    
             return 1;
-
+    
         } catch (Exception e) {
             System.out.println(e.getMessage());
             return 0;
@@ -515,7 +514,7 @@ public class employees {
             }
         }
     }
-
+    
     public int viewEmployee() {
         Scanner sc = new Scanner(System.in);
     
