@@ -454,6 +454,9 @@ public class products {
                 pstmt = conn.prepareStatement(lockSQL);
                 pstmt.setString(1, productCode);
                 rs = pstmt.executeQuery();
+
+                pstmt = conn.prepareStatement("SELECT SLEEP (5)");
+                pstmt.executeQuery();
     
                 String sql = "DELETE FROM product_productlines WHERE productCode = ? AND productLine = ?";
                 pstmt = conn.prepareStatement(sql);
@@ -464,12 +467,9 @@ public class products {
                 System.out.println("Press Enter to remove a Productline from an existing product.");
                 sc.nextLine();
 
-                pstmt = conn.prepareStatement("SELECT SLEEP (5)");
-                pstmt.executeQuery();
-
                 pstmt.executeUpdate();
                 conn.commit();
-                System.out.println("Productline was added to productCode: " + productCode);                
+                System.out.println("Productline was removed from productCode: " + productCode);                
             } catch (Exception e) {
                 e.printStackTrace();
                 try {
