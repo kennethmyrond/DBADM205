@@ -552,7 +552,6 @@ public class employees {
         }
     }
 
-
     private void employeeTableHeader() {
         System.out.println("---------------------------------------------------------------------------------------------------------------------------------------------");
         System.out.println("| Emp ID    | Last Name     | First Name       | Extension |     Email                           | Job Title             | Emp Type |isDeact|");
