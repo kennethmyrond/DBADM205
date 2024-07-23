@@ -96,10 +96,10 @@ public class employees {
     public int reclassifyEmployee(int tempChoice) {
         Scanner sc = new Scanner(System.in);
 
-        String lockSql = "SELECT * FROM employees WHERE employeeNumber = ? FOR UPDATE";
-        String sql1 = "CALL employeeTypeToInventoryManagers (?, ?)";
-        String sql2 = "CALL employeeTypeToSalesManager (?, ?)";
-        String sql3 = "CALL employeeTypeToSalesRepresentative (?)";
+        String lockSql  = "SELECT * FROM employees WHERE employeeNumber = ? FOR UPDATE";
+        String sql1     = "CALL employeeTypeToInventoryManagers (?, ?)";
+        String sql2     = "CALL employeeTypeToSalesManager (?, ?)";
+        String sql3     = "CALL employeeTypeToSalesRepresentative (?)";
 
         int employeeID;
         int deptCode = 0;
@@ -119,7 +119,6 @@ public class employees {
                         conn.rollback();
                         return 0;
                     }
-
 
                     String sql;
                     switch (tempChoice) {
@@ -143,15 +142,15 @@ public class employees {
                     }
 
 
-                    try (PreparedStatement updatePstmt = conn.prepareStatement(sql)) {
-                        if (tempChoice == 1 || tempChoice == 2) {
-                            updatePstmt.setInt(1, employeeID);
-                            updatePstmt.setInt(2, deptCode);
-                        } else {
-                            updatePstmt.setInt(1, employeeID);
+                        try (PreparedStatement updatePstmt = conn.prepareStatement(sql)) {
+                            if (tempChoice == 1 || tempChoice == 2) {
+                                updatePstmt.setInt(1, employeeID);
+                                updatePstmt.setInt(2, deptCode);
+                            } else {
+                                updatePstmt.setInt(1, employeeID);
+                            }
+                            updatePstmt.execute();
                         }
-                        updatePstmt.execute();
-                    }
 
                     conn.commit();
                     System.out.println("Employee reclassified successfully.");
@@ -227,7 +226,6 @@ public class employees {
             conn = DriverManager.getConnection(url, username, password);
             conn.setAutoCommit(false);
 
-            // Fetch and display employees
             String sql = "SELECT employeeNumber FROM employees WHERE employee_type = 'S' AND jobTitle = 'Sales Rep'";
             pstmt = conn.prepareStatement(sql);
             rs = pstmt.executeQuery();
@@ -269,7 +267,6 @@ public class employees {
             System.out.println("Enter Sales Manager Number:");
             salesManagerNumber = Integer.parseInt(sc.nextLine());
 
-            // Check if the employee exists with a lock
             String checkSql = "SELECT COUNT(*) FROM employees WHERE employeeNumber = ? FOR UPDATE";
             pstmt = conn.prepareStatement(checkSql);
             pstmt.setInt(1, employeeID);
@@ -278,9 +275,7 @@ public class employees {
             int count = rs.getInt(1);
 
             if (count > 0) {
-                // Insert into salesRepAssignments
-                String insertAssignmentSql = "INSERT INTO salesRepAssignments (employeeNumber, officeCode, startDate, endDate, reason, quota, salesManagerNumber, end_username, end_userreason) "
-                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                String insertAssignmentSql = "INSERT INTO salesRepAssignments (employeeNumber, officeCode, startDate, endDate, reason, quota, salesManagerNumber, end_username, end_userreason) " + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 PreparedStatement pstmt1 = conn.prepareStatement(insertAssignmentSql);
                 pstmt1.setInt(1, employeeID);
                 pstmt1.setInt(2, officeCode);
@@ -294,9 +289,7 @@ public class employees {
 
                 pstmt1.executeUpdate();
 
-                // Insert into salesRepresentatives
-                String insertRepSql = "INSERT INTO salesRepresentatives (employeeNumber, end_username, end_userreason) "
-                        + "VALUES (?, ?, ?)";
+                String insertRepSql = "INSERT INTO salesRepresentatives (employeeNumber, end_username, end_userreason) " + "VALUES (?, ?, ?)";
                 PreparedStatement pstmt2 = conn.prepareStatement(insertRepSql);
                 pstmt2.setInt(1, employeeID);
                 pstmt2.setString(2, end_username);
@@ -493,33 +486,33 @@ public class employees {
             String sql;
             PreparedStatement pstmt;
 
-            if (employeeID == 0) {
-                sql = "SELECT * FROM employees LOCK IN SHARE MODE";
-                pstmt = conn.prepareStatement(sql);
-            } else {
-                sql = "SELECT * FROM employees WHERE employeeNumber = ? LOCK IN SHARE MODE";
-                pstmt = conn.prepareStatement(sql);
-                pstmt.setInt(1, employeeID);
-            }
+                if (employeeID == 0) {
+                    sql = "SELECT * FROM employees LOCK IN SHARE MODE";
+                    pstmt = conn.prepareStatement(sql);
+                } else {
+                    sql = "SELECT * FROM employees WHERE employeeNumber = ? LOCK IN SHARE MODE";
+                    pstmt = conn.prepareStatement(sql);
+                    pstmt.setInt(1, employeeID);
+                }
 
             System.out.println("Press Enter to Start Viewing the Employee(s)");
             sc.nextLine();
 
             ResultSet rs = pstmt.executeQuery();
 
-            if (employeeID == 0) {
-                employeeTableHeader();
-                while (rs.next()) {
-                    employeeTableRow(rs);
-                }
-            } else {
-                if (rs.next()) {
+                if (employeeID == 0) {
                     employeeTableHeader();
-                    employeeTableRow(rs);
+                    while (rs.next()) {
+                        employeeTableRow(rs);
+                    }
                 } else {
-                    System.out.println("Employee does not exist.");
+                    if (rs.next()) {
+                        employeeTableHeader();
+                        employeeTableRow(rs);
+                    } else {
+                        System.out.println("Employee does not exist.");
+                    }
                 }
-            }
 
             rs.close();
             pstmt.close();
@@ -786,7 +779,7 @@ public class employees {
         boolean isSalesManager = false;
 
         try {
-            Connection conn = DriverManager.getConnection("jdbc:mysql://mysql-176128-0.cloudclusters.net:10107/dbsalesV2.5G205?useTimezone=true&serverTimezone=UTC&user=DBADM_205&password=DLSU1234!");
+            conn = DriverManager.getConnection(url, username, password);
             System.out.println("Connection Successful");
 
             String sql = "SELECT employeeNumber FROM employees WHERE jobTitle LIKE 'Sales Manager%'";
