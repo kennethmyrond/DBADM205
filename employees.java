@@ -525,6 +525,10 @@ public class employees {
 
             ResultSet rs = pstmt.executeQuery();
 
+            pstmt.close();
+            conn.commit();
+            conn.close();
+
                 if (employeeID == 0) {
                     employeeTableHeader();
                     while (rs.next()) {
@@ -538,14 +542,8 @@ public class employees {
                         System.out.println("Employee does not exist.");
                     }
                 }
-
             rs.close();
-            pstmt.close();
-            conn.commit();
-            conn.close();
-
             return 1;
-
         } catch (Exception e) {
             System.out.println(e.getMessage());
             return 0;
