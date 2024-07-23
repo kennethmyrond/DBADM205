@@ -204,7 +204,7 @@ public class employees {
         } 
     }
 
-    public int createSalesRepAssign() {
+    public int createSalesRepAssign(int salesManagerNumber) {
         Scanner sc = new Scanner(System.in);
         int employeeID;
         int officeCode;
@@ -212,7 +212,6 @@ public class employees {
         LocalDate endDate;
         String reason;
         int quota = 10000;
-        int salesManagerNumber;
         String end_username = "DBADMIN205@S17";
         String end_userreason = "Test";
 
@@ -234,7 +233,7 @@ public class employees {
             while (rs.next()) {
                 int empNumber = rs.getInt("employeeNumber");
 
-                String detailsSql = "SELECT * FROM employees WHERE employeeNumber = ?";
+                String detailsSql = "SELECT * FROM employees WHERE employeeNumber = ? FOR UPDATE";
                 PreparedStatement detailsPstmt = conn.prepareStatement(detailsSql);
                 detailsPstmt.setInt(1, empNumber);
                 ResultSet detailsRs = detailsPstmt.executeQuery();
@@ -263,9 +262,6 @@ public class employees {
             System.out.println("Enter reason:");
             reason = sc.nextLine();
 
-
-            System.out.println("Enter Sales Manager Number:");
-            salesManagerNumber = Integer.parseInt(sc.nextLine());
 
             String checkSql = "SELECT COUNT(*) FROM employees WHERE employeeNumber = ? FOR UPDATE";
             pstmt = conn.prepareStatement(checkSql);
@@ -838,7 +834,7 @@ public class employees {
                     break;
                 case 3:
                     if (isSalesManager) {
-                        e.createSalesRepAssign();
+                        e.createSalesRepAssign(employeeRoleNo);
                     } else {
                         System.out.println("Access denied. Only Sales Managers can create Sales Rep assignments.");
                     }
