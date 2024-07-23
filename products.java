@@ -170,10 +170,6 @@ public class products {
                 pstmt.setString(1, productCode);
                 pstmt.executeQuery();
 
-                // Adding sleep to capture conflicts
-                pstmt = conn.prepareStatement("SELECT SLEEP (3)");
-                pstmt.executeQuery();
-
                 System.out.println("Press enter key to update");
                 sc.nextLine();
 
@@ -202,6 +198,10 @@ public class products {
                 pstmt = conn.prepareStatement(productTypeQuery);
                 pstmt.setString(1, productCode);
                 rs = pstmt.executeQuery();
+
+                // Adding sleep to capture conflicts
+                pstmt = conn.prepareStatement("SELECT SLEEP (5)");
+                pstmt.executeQuery();                
 
                 if(rs.next()) {
                     char currentType = rs.getString("product_type").charAt(0);
@@ -372,7 +372,7 @@ public class products {
         Scanner sc = new Scanner(System.in);
         int choice;
 
-        System.out.println("Type: \n [0] - Classify a Product to a Productline \n [1] - Remove a productline from a product");
+        System.out.println("Type: \n [0] - Classify a Product to a Productline \n [1] - Remove a productline from a product \n [2] - Add a Productline \n");
         choice = sc.nextInt();
         sc.nextLine();
 
@@ -400,6 +400,12 @@ public class products {
             pstmt.setString(1, productCode);
             rs = pstmt.executeQuery();
 
+            System.out.println("Press Enter to Start Adding a Productline to an existing product.");
+            sc.nextLine();
+            
+            pstmt = conn.prepareStatement("SELECT SLEEP (5)");
+            pstmt.executeQuery();
+
             String sql = "INSERT INTO product_productlines (productCode, productLine, end_username, end_userreason) VALUES (?, ?, ?, ?)";
             pstmt = conn.prepareStatement(sql);
 
@@ -408,8 +414,6 @@ public class products {
             pstmt.setString(3, username);
             pstmt.setString(4, end_userreason);
             
-            System.out.println("Press Enter to Start Adding a Productline to an existing product.");
-            sc.nextLine();
             pstmt.executeUpdate();
             conn.commit();
             System.out.println("Productline was added to productCode: " + productCode);
@@ -460,6 +464,9 @@ public class products {
                 System.out.println("Press Enter to remove a Productline from an existing product.");
                 sc.nextLine();
 
+                pstmt = conn.prepareStatement("SELECT SLEEP (5)");
+                pstmt.executeQuery();
+
                 pstmt.executeUpdate();
                 conn.commit();
                 System.out.println("Productline was added to productCode: " + productCode);                
@@ -484,6 +491,68 @@ public class products {
                 sc.close();
             }
         } // End of else if(choice == 1)
+        else if(choice == 2) {
+            System.out.println("Type a Productline: ");
+            productLine = sc.nextLine();
+
+            System.out.println("Type in a description: ");
+            String description = sc.nextLine();
+
+            System.out.println("Enter a HTML: ");
+            String html = sc.nextLine();
+
+            System.out.println("Enter a reason for adding Productline: ");
+            end_userreason = sc.nextLine();
+
+            try {
+                conn = DriverManager.getConnection(url, username, password);
+                conn.setAutoCommit(false);
+                
+                // Lock productlines table
+                String lockSQL = "SELECT * FROM productlines FOR UPDATE";
+                pstmt = conn.prepareStatement(lockSQL);
+                rs = pstmt.executeQuery();
+
+                System.out.println("Press Enter to add a Productline.");
+                sc.nextLine();
+
+                pstmt = conn.prepareStatement("SELECT SLEEP (5)");
+                pstmt.executeQuery();                
+
+                String sql = "INSERT INTO productlines (productLine, textDescription, htmlDescription, end_username, end_userreason) VALUES (?, ?, ?, ?, ?)";
+                pstmt = conn.prepareStatement(sql);
+
+                pstmt.setString(1, productLine);
+                pstmt.setString(2, description);
+                pstmt.setString(3, html);
+                pstmt.setString(4, username);
+                pstmt.setString(5, end_userreason);
+
+                pstmt.executeUpdate();
+                conn.commit();
+
+                System.out.println("Productline added successfully.");
+            } catch (Exception e) {
+                if (conn != null) {
+                    try {
+                        conn.rollback();  // Rollback transaction on error
+                    } catch (SQLException rollbackEx) {
+                        rollbackEx.printStackTrace();
+                    }
+                }
+                e.printStackTrace();
+                return 0;
+            } finally {
+                try {
+                    if (rs != null) rs.close();
+                    if (pstmt != null) pstmt.close();
+                    if (conn != null) conn.close();
+                } catch (SQLException se) {
+                    se.printStackTrace();
+                }
+                sc.close();
+            }
+        } // End of else if (choice == 2)
         else {
             System.out.println("Invalid Input");
         }
