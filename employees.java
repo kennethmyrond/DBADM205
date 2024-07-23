@@ -6,14 +6,14 @@ public class employees {
     // Database URL
     
     // public String url = "jdbc:mysql://mysql-176128-0.cloudclusters.net:10107/dbsalesV2.5G205";
-    public String url = "jdbc:mysql://mysql-176128-0.cloudclusters.net:10107/DBSALES26_G205";
-    public String username = "DBADM_205";
-    public String password = "DLSU1234!";
+    // public String url = "jdbc:mysql://mysql-176128-0.cloudclusters.net:10107/DBSALES26_G205";
+    // public String username = "DBADM_205";
+    // public String password = "DLSU1234!";
 
-    /* 
+    
     public String url = "jdbc:mysql://127.0.0.1:3306/dbsales26_g205";
     public String username = "root";
-    public String password = "DLSU1234";*/
+    public String password = "DLSU1234";
 
 
     public int      employeeID;
@@ -169,7 +169,7 @@ public class employees {
             sleeppstmt = conn.prepareStatement("SELECT SLEEP (3)");
             sleeppstmt.executeQuery();
 
-            System.out.println(pstmt);
+            //System.out.println(pstmt);
 
             pstmt.execute();
             pstmt.close();
@@ -298,7 +298,7 @@ public class employees {
                 pstmt1.setInt(1, employeeID);
                 pstmt1.setInt(2, officeCode);
                 pstmt1.setString(3, startDate);
-                pstmt1.setString(4, startDate);
+                pstmt1.setString(4, endDate);
                 pstmt1.setString(5, reason);
                 pstmt1.setInt(6, quota);
                 pstmt1.setInt(7, salesManagerNumber);
@@ -485,20 +485,23 @@ public class employees {
         }
     }
 
-    public int viewEmployee()     {
+    public int viewEmployee() {
         Scanner sc = new Scanner(System.in);
-
+    
         System.out.println("Enter [0] To View All Employees \nEnter Employee ID:");
-        employeeID = Integer.parseInt(sc.nextLine());
-
+        int employeeID = Integer.parseInt(sc.nextLine());
+    
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+    
         try {
-            Connection conn = DriverManager.getConnection(url, username, password);
+            conn = DriverManager.getConnection(url, username, password);
             System.out.println("Connection Successful");
             conn.setAutoCommit(false);
-
+    
             String sql;
-            PreparedStatement pstmt;
-
+    
             if (employeeID == 0) {
                 sql = "SELECT * FROM employees LOCK IN SHARE MODE";
                 pstmt = conn.prepareStatement(sql);
@@ -507,15 +510,12 @@ public class employees {
                 pstmt = conn.prepareStatement(sql);
                 pstmt.setInt(1, employeeID);
             }
-
+    
             System.out.println("Press Enter to Start Viewing the Employee(s)");
             sc.nextLine();
-
-            ResultSet rs = pstmt.executeQuery();
-
-            conn.commit();
-            conn.close();
-
+    
+            rs = pstmt.executeQuery();
+    
             if (employeeID == 0) {
                 employeeTableHeader();
                 while (rs.next()) {
@@ -529,15 +529,26 @@ public class employees {
                     System.out.println("Employee does not exist.");
                 }
             }
-
+    
             rs.close();
             pstmt.close();
-
+            conn.commit();
+            conn.close();
             return 1;
-
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            return 0;
         } catch (Exception e) {
             System.out.println(e.getMessage());
             return 0;
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstmt != null) pstmt.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                System.out.println("Error closing resources: " + e.getMessage());
+            }
         }
     }
 
@@ -565,30 +576,28 @@ public class employees {
 
     public int modifySalesRepDetails() {
         Scanner sc = new Scanner(System.in);
-
+    
         System.out.println("Enter Employee ID:");
         int employeeID = Integer.parseInt(sc.nextLine());
-
+    
         Connection conn = null;
         PreparedStatement fetchPstmt = null;
         PreparedStatement updatePstmt = null;
-        PreparedStatement jobTitlesPstmt = null;
+        PreparedStatement sleeppstmt = null;
         ResultSet rs = null;
-        ResultSet jobTitlesRs = null;
-
-
+    
         try {
             conn = DriverManager.getConnection(url, username, password);
             System.out.println("Connection Successful");
             conn.setAutoCommit(false);
-
+    
             String fetchSql = "SELECT * FROM salesRepAssignments WHERE employeeNumber = ? FOR UPDATE";
             fetchPstmt = conn.prepareStatement(fetchSql);
             fetchPstmt.setInt(1, employeeID);
-
+    
             System.out.println("Press enter key to start retrieving the data");
             sc.nextLine();
-
+    
             rs = fetchPstmt.executeQuery();
             if (rs.next()) {
                 int officeCode = rs.getInt("officeCode");
@@ -597,7 +606,7 @@ public class employees {
                 String reason = rs.getString("reason");
                 int quota = rs.getInt("quota");
                 int salesManagerNumber = rs.getInt("salesManagerNumber");
-
+    
                 System.out.println("Current Details:");
                 System.out.println("Office Code: " + officeCode);
                 System.out.println("Start Date: " + startDate);
@@ -609,32 +618,30 @@ public class employees {
                 System.out.println("No employee found with the given ID.");
                 return 1;
             }
+    
             rs.close();
-
-            fetchPstmt = conn.prepareStatement("SELECT SLEEP (3)");
-            fetchPstmt.executeQuery();
-
             fetchPstmt.close();
-
-            int empDetail;
-            // do {
-            // Displaying the menu options to the user
-            System.out.println("\nSelect Sale Representative Assignmment Detail To Edit: \n" +
+    
+            sleeppstmt = conn.prepareStatement("SELECT SLEEP(3)");
+            sleeppstmt.executeQuery();
+            sleeppstmt.close();
+    
+            System.out.println("\nSelect Sale Representative Assignment Detail To Edit: \n" +
                     "  [1] - End Date \n" +
                     "  [2] - Reason \n" +
                     "  [3] - Quota \n" +
                     "  [4] - Sales Manager Number \n" +
                     "  [9] - EXIT");
-
+    
             int salesRepDetail = sc.nextInt();
             sc.nextLine(); // Consume the newline character
-
+    
             String updateSql = null;
             switch (salesRepDetail) {
                 case 1:
                     System.out.println("Enter New End Date:");
                     String newEndDate = sc.nextLine();
-
+    
                     updateSql = "UPDATE salesRepAssignments SET endDate = ? WHERE employeeNumber = ?";
                     updatePstmt = conn.prepareStatement(updateSql);
                     updatePstmt.setString(1, newEndDate);
@@ -643,25 +650,27 @@ public class employees {
                 case 2:
                     System.out.println("Enter New Reason:");
                     String newReason = sc.nextLine();
-
+    
                     updateSql = "UPDATE salesRepAssignments SET reason = ? WHERE employeeNumber = ?";
                     updatePstmt = conn.prepareStatement(updateSql);
                     updatePstmt.setString(1, newReason);
                     updatePstmt.setInt(2, employeeID);
                     break;
                 case 3:
-                    System.out.println("Enter Quota");
+                    System.out.println("Enter Quota:");
                     int newQuota = sc.nextInt();
-
+                    sc.nextLine(); // Consume the newline character
+    
                     updateSql = "UPDATE salesRepAssignments SET quota = ? WHERE employeeNumber = ?";
                     updatePstmt = conn.prepareStatement(updateSql);
                     updatePstmt.setInt(1, newQuota);
                     updatePstmt.setInt(2, employeeID);
                     break;
                 case 4:
-                    System.out.println("Enter Sales Manager Number");
+                    System.out.println("Enter Sales Manager Number:");
                     int newSalesManagerNo = sc.nextInt();
-
+                    sc.nextLine(); // Consume the newline character
+    
                     updateSql = "UPDATE salesRepAssignments SET salesManagerNumber = ? WHERE employeeNumber = ?";
                     updatePstmt = conn.prepareStatement(updateSql);
                     updatePstmt.setInt(1, newSalesManagerNo);
@@ -674,7 +683,7 @@ public class employees {
                     System.out.println("Invalid choice, please try again.");
                     return 1;
             }
-
+    
             int rowsUpdated = updatePstmt.executeUpdate();
             if (rowsUpdated > 0) {
                 System.out.println("Sales Representative Assignment details updated successfully.");
@@ -682,8 +691,7 @@ public class employees {
                 System.out.println("No employee found with the given ID.");
             }
             updatePstmt.close();
-            // } while (empDetail != 9);
-
+    
             conn.commit();
             conn.close();
         } catch (SQLException e) {
@@ -701,8 +709,6 @@ public class employees {
                 if (rs != null) rs.close();
                 if (fetchPstmt != null) fetchPstmt.close();
                 if (updatePstmt != null) updatePstmt.close();
-                if (jobTitlesRs != null) jobTitlesRs.close();
-                if (jobTitlesPstmt != null) jobTitlesPstmt.close();
                 if (conn != null) conn.close();
             } catch (SQLException se) {
                 se.printStackTrace();
@@ -710,7 +716,7 @@ public class employees {
         }
         return 0;
     }
-
+    
     public int modifyEmployee() {
         Scanner sc = new Scanner(System.in);
 
@@ -855,7 +861,6 @@ public class employees {
         return 0;
     }
 
- 
     public void addDepartment() {
         Scanner sc = new Scanner(System.in);
 
