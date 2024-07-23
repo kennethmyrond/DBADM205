@@ -193,7 +193,7 @@ public class products {
                 pstmt.setString(4, productCode);
                 pstmt.executeUpdate();
 
-                // Update product_pricing or product_wholesale based on current type
+                // Update product_pricing or product_wholesale based on product_type
                 String productTypeQuery = "SELECT product_type FROM current_products WHERE productCode = ?";
                 pstmt = conn.prepareStatement(productTypeQuery);
                 pstmt.setString(1, productCode);
