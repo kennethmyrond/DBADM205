@@ -3,11 +3,19 @@ import java.util.Scanner;
 
 public class sales {
 
+    // javac sales.java
+    //java -cp .;./mysql-connector-j-9.0.0.jar sales
+
     // Database URL
-    public String url = "jdbc:mysql://127.0.0.1:3306/db2.6test";
+    public String url = "jdbc:mysql://mysql-176128-0.cloudclusters.net:10107/DBSALES26_G205"; //jdbc:mysql://127.0.0.1:3306/db2.6test
+    //jdbc:mysql://mysql-176128-0.cloudclusters.net:10107/DBSALES26_G205
     // Database credentials
-    public String username = "root";
-    public String password = "root1234";
+    public String username = "DBADM_205";
+    // DBADM_205
+    // root
+    public String password = "DLSU1234!";
+    // DLSU1234!
+    // root1234
 
     public int addOrder() {
         Scanner sc = new Scanner(System.in);
@@ -16,12 +24,17 @@ public class sales {
         int v_orderNumber = sc.nextInt();
         sc.nextLine(); // Consume newline
 
+        String v_requiredDate = "";
+    int v_customerNumber = 0;
+
+    if (v_orderNumber == 0) {
         System.out.println("Enter Required Date (YYYY-MM-DD):");
-        String v_requiredDate = sc.nextLine() + " 00:00:00"; // Convert to datetime format
+        v_requiredDate = sc.nextLine() + " 00:00:00"; // Convert to datetime format
 
         System.out.println("Enter Customer Number:");
-        int v_customerNumber = sc.nextInt();
+        v_customerNumber = sc.nextInt();
         sc.nextLine(); // Consume newline
+    }
 
         System.out.println("Enter Product Code:");
         String v_productCode = sc.nextLine();
@@ -73,6 +86,8 @@ public class sales {
                 }
                 rs.close();
                 pstmt.close();
+
+                System.out.println("AYO" + newOrderNumber_var);
 
                 if (newOrderNumber_var == 0) {
                     newOrderNumber_var = 9001;
@@ -133,6 +148,7 @@ public class sales {
             pstmt.executeUpdate();
             pstmt.close();
 
+
             // Delay to capture possible conflicts
             String delaySQL = "SELECT SLEEP(3)";
             pstmt = conn.prepareStatement(delaySQL);
@@ -163,6 +179,7 @@ public class sales {
             try {
                 if (pstmt != null) pstmt.close();
                 if (conn != null) conn.close();
+                if (sc != null) sc.close();
                 //if (nestedCall == 0 && conn != null) { // Added check for conn != null to avoid NullPointerException
                   //  conn.rollback();
                 //}
@@ -356,7 +373,7 @@ public int updateOrderProduct() {
         String v_enduserreason = scanner.nextLine();
         scanner.close();
 
-        return updateOrder(v_orderNumber, v_orderLineNumber, v_quantityOrdered, v_priceEach, v_endusername, v_enduserreason);
+        return updateOrderDetails(v_orderNumber, v_orderLineNumber, v_quantityOrdered, v_priceEach, v_endusername, v_enduserreason);
     }
 }
 
@@ -486,6 +503,13 @@ private int deleteOrder(int v_orderNumber, int v_orderLineNumber) {
             pstmt.close();
         }
 
+        // Delay to capture possible conflicts
+        String delaySQL = "SELECT SLEEP(3)";
+        pstmt = conn.prepareStatement(delaySQL);
+        pstmt.executeQuery();
+        pstmt.close();
+
+
         if (nestedCall == 0) {
             conn.commit();
         }
@@ -515,7 +539,7 @@ private int deleteOrder(int v_orderNumber, int v_orderLineNumber) {
     }
 }
 
-private int updateOrder(int v_orderNumber, int v_orderLineNumber, int v_quantityOrdered, double v_priceEach, String v_endusername, String v_enduserreason) {
+private int updateOrderDetails(int v_orderNumber, int v_orderLineNumber, int v_quantityOrdered, double v_priceEach, String v_endusername, String v_enduserreason) {
     Connection conn = null;
     PreparedStatement pstmt = null;
     ResultSet rs = null;
@@ -671,10 +695,10 @@ public int updateOrder() {
         v_comments = null;
     }
 
-    System.out.print("Enter End Username: ");
+    System.out.print("Enter Username: ");
     String endUsername = scanner.nextLine();
 
-    System.out.print("Enter End User Reason: ");
+    System.out.print("Enter Update Reason: ");
     String endUserReason = scanner.nextLine();
 
     Timestamp v_shippedDate = null;
@@ -899,6 +923,12 @@ public int updateOrder() {
         pstmt.executeUpdate();
         pstmt.close();
 
+        // Delay to capture possible conflicts
+        String delaySQL = "SELECT SLEEP(3)";
+        pstmt = conn.prepareStatement(delaySQL);
+        pstmt.executeQuery();
+        pstmt.close();
+
         if (nestedCall == 0) {
             conn.commit();
         }
@@ -930,20 +960,246 @@ public int updateOrder() {
 }
 
 
+// function for viewing product and its price
+public void viewProduct() {
+    Scanner sc = new Scanner(System.in);
+
+    // Get user inputs
+    System.out.print("Enter Product Code: ");
+    String v_productCode = sc.nextLine();
+
+    Connection conn = null;
+    PreparedStatement pstmt = null;
+    ResultSet rs = null;
+    int nestedCall = 0;
+    try {
+        conn = DriverManager.getConnection(url, username, password);
+        //conn.setAutoCommit(false);
+
+        // Check for nested calls
+        String checkNestedCallSQL = "SELECT COUNT(1) FROM information_schema.innodb_trx WHERE trx_mysql_thread_id = CONNECTION_ID()";
+        pstmt = conn.prepareStatement(checkNestedCallSQL);
+        rs = pstmt.executeQuery();
+        if (rs.next()) {
+            nestedCall = rs.getInt(1);
+        }
+        rs.close();
+        pstmt.close();
+
+        if (nestedCall == 0) {
+            conn.setAutoCommit(false);
+        }
 
 
+        // lock products
+        String lockProductsSQL = "SELECT * FROM products WHERE productCode = ? FOR SHARE";
+        pstmt = conn.prepareStatement(lockProductsSQL);
+        pstmt.setString(1, v_productCode);
+        pstmt.executeQuery();
+        pstmt.close();
+
+        // get product Name from products table
+        String productNameSQL = "SELECT productName FROM products WHERE productCode = ?";
+        pstmt = conn.prepareStatement(productNameSQL);
+        pstmt.setString(1, v_productCode);
+        rs = pstmt.executeQuery();
+
+        String productName = "";
+        if (rs.next()) {
+            productName = rs.getString(1);
+        }
+        rs.close();
+        pstmt.close();
+
+        // lock product_pricing
+        String lockProductPricingSQL = "SELECT * FROM product_pricing WHERE productCode = ? FOR SHARE";
+        pstmt = conn.prepareStatement(lockProductPricingSQL);
+        pstmt.setString(1, v_productCode);
+        pstmt.executeQuery();
+        pstmt.close();
+
+        // lock product_wholesale
+        String lockProductWholesaleSQL = "SELECT * FROM product_wholesale WHERE productCode = ? FOR SHARE";
+        pstmt = conn.prepareStatement(lockProductWholesaleSQL);
+        pstmt.setString(1, v_productCode);
+        pstmt.executeQuery();
+        pstmt.close();
+
+        // get min and max price from product_pricing
+
+        String sql = "select getPrice(?, ?)";
+        pstmt = conn.prepareStatement(sql);
+        pstmt.setString(1, v_productCode);
+        pstmt.setString(2, "MIN");
+        rs = pstmt.executeQuery();
+
+        double min_price = 0;
+        if (rs.next()) {
+            min_price = rs.getDouble(1);
+        }
+        rs.close();
+
+        pstmt.setString(2, "MAX");
+        rs = pstmt.executeQuery();
+
+        double max_price = 0;
+        if (rs.next()) {
+            max_price = rs.getDouble(1);
+        }
+        rs.close();
+        pstmt.close();
+
+        System.out.println("Product Code | Product Name | Min Price | Max Price");
+        System.out.println(v_productCode + " | " + productName + " | " + min_price + " | " + max_price);
+
+        // Delay to capture possible conflicts
+        String delaySQL = "SELECT SLEEP(3)";
+        pstmt = conn.prepareStatement(delaySQL);
+        pstmt.executeQuery();
+        pstmt.close();
+
+        if (nestedCall == 0) {
+            conn.commit();
+        }
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+        try {
+            if (conn != null) {
+                conn.rollback();
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+    } finally {
+        try {
+            if (rs != null) rs.close();
+            if (pstmt != null) pstmt.close();
+            if (conn != null) conn.close();
+            //sc.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+// function for viewing order and its details
+public void viewOrder() {
+    Scanner sc = new Scanner(System.in);
+
+    // Get user inputs
+    System.out.print("Enter Order Number: ");
+    int v_orderNumber = sc.nextInt();
+    sc.nextLine();  // Consume newline
+
+    Connection conn = null;
+    PreparedStatement pstmt = null;
+    ResultSet rs = null;
+    int nestedCall = 0;
+
+
+    try {
+        conn = DriverManager.getConnection(url, username, password);
+        //conn.setAutoCommit(false);
+
+        // Check for nested calls
+        String checkNestedCallSQL = "SELECT COUNT(1) FROM information_schema.innodb_trx WHERE trx_mysql_thread_id = CONNECTION_ID()";
+        pstmt = conn.prepareStatement(checkNestedCallSQL);
+        rs = pstmt.executeQuery();
+        if (rs.next()) {
+            nestedCall = rs.getInt(1);
+        }
+        rs.close();
+        pstmt.close();
+
+        if (nestedCall == 0) {
+            conn.setAutoCommit(false);
+        }
+
+        // lock orders
+        String lockOrdersSQL = "SELECT * FROM orders WHERE orderNumber = ? FOR SHARE";
+        pstmt = conn.prepareStatement(lockOrdersSQL);
+        pstmt.setInt(1, v_orderNumber);
+        pstmt.executeQuery();
+        pstmt.close();
+
+
+        // get order details
+        String orderDetailsSQL = "SELECT orderNumber, orderDate, requiredDate, shippedDate, status, comments FROM orders WHERE orderNumber = ?";
+        pstmt = conn.prepareStatement(orderDetailsSQL);
+        pstmt.setInt(1, v_orderNumber);
+        rs = pstmt.executeQuery();
+
+        System.out.println("Order Number | Order Date | Required Date | Shipped Date | Status | Comments");
+        while (rs.next()) {
+            System.out.println(rs.getInt(1) + " | " + rs.getDate(2) + " | " + rs.getDate(3) + " | " + rs.getDate(4) + " | " + rs.getString(5) + " | " + rs.getString(6));
+        }
+
+        // lock orderdetails
+        String lockOrderDetailsSQL = "SELECT * FROM orderdetails WHERE orderNumber = ? FOR SHARE";
+        pstmt = conn.prepareStatement(lockOrderDetailsSQL);
+        pstmt.setInt(1, v_orderNumber);
+        pstmt.executeQuery();
+        pstmt.close();
+
+        // get order details
+        String orderProductDetailsSQL = "SELECT productCode, quantityOrdered, priceEach, orderLineNumber, referenceno FROM orderdetails WHERE orderNumber = ?";
+        pstmt = conn.prepareStatement(orderProductDetailsSQL);
+        pstmt.setInt(1, v_orderNumber);
+        rs = pstmt.executeQuery();
+
+        System.out.println("Product Code | Quantity Ordered | Price Each | Order Line Number | Reference No");
+        while (rs.next()) {
+            System.out.println(rs.getString(1) + " | " + rs.getInt(2) + " | " + rs.getDouble(3) + " | " + rs.getInt(4) + " | " + rs.getString(5));
+        }
+        rs.close();
+        pstmt.close();
+
+        // Delay to capture possible conflicts
+        String delaySQL = "SELECT SLEEP(3)";
+        pstmt = conn.prepareStatement(delaySQL);
+        pstmt.executeQuery();
+        pstmt.close();
+
+        if (nestedCall == 0) {
+            conn.commit();
+        }
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+        try {
+            if (conn != null) {
+                conn.rollback();
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+    } finally {
+        try {
+            if (rs != null) rs.close();
+            if (pstmt != null) pstmt.close();
+            if (conn != null) conn.close();
+            //sc.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
 
     public static void main(String[] args) {
         Scanner sc = new Scanner(System.in);
         int choice;
         // Letting the user choose between the functions
-        System.out.println("Enter Type: \n  [0] - ADD AN ORDER \n  [1] - UPDATE ORDERED PRODUCT \n  [2] - UPDATE ORDER \n  [3] - CREATE NEW SALES REP ASSIGNMENT OR SALES REP ONLY \n  [4] - VIEW ALL DETAILS OF SALES REP (PREVIOUS ASSIGN) \n  [5] - VIEW BASIC EMPLOYEE RECORD ");
+        System.out.println("Enter Type: \n  [0] - ADD AN ORDER \n  [1] - UPDATE ORDERED PRODUCT \n  [2] - UPDATE ORDER \n  [3] - VIEW PRODUCT DETAILS AND PRICING \n  [4] - VIEW ORDER AND DETAILS \n [5] - EXIT");
 
         choice = sc.nextInt();
         sales s = new sales();
         if (choice == 0) s.addOrder();
         else if (choice == 1) s.updateOrderProduct();
         else if (choice == 2) s.updateOrder();
+        else if (choice == 3) s.viewProduct();
+        else if (choice == 4) s.viewOrder();
         else System.out.println("Invalid choice!");
 
         System.out.println("Press enter key to continue....");
