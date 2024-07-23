@@ -526,8 +526,7 @@ public class employees {
             ResultSet rs = pstmt.executeQuery();
 
             pstmt.close();
-            conn.commit();
-            conn.close();
+            
 
                 if (employeeID == 0) {
                     employeeTableHeader();
@@ -542,6 +541,8 @@ public class employees {
                         System.out.println("Employee does not exist.");
                     }
                 }
+            conn.commit();
+            conn.close();
             rs.close();
             return 1;
         } catch (Exception e) {
@@ -1186,12 +1187,12 @@ public class employees {
                     System.out.println("Invalid choice, please try again.");
             }
 
-            if (choice != 9) {
+            if (choice != 0) {
                 System.out.println("Press enter key to continue....");
                 sc.nextLine();
             }
 
-        } while (choice != 9);
+        } while (choice != 0);
 
         sc.close();
     }
