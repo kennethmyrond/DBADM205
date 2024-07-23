@@ -323,147 +323,288 @@ public int updateOrderProduct() {
 public int updateOrder() {
     Scanner scanner = new Scanner(System.in);
 
-        // Get user inputs
-        System.out.print("Enter Order Number: ");
-        int v_orderNumber = scanner.nextInt();
-        scanner.nextLine();  // Consume newline
+    // Get user inputs
+    System.out.print("Enter Order Number: ");
+    int v_orderNumber = scanner.nextInt();
+    scanner.nextLine();  // Consume newline
 
-        System.out.print("Enter Required Date (YYYY-MM-DD HH:MM:SS): ");
-        String v_requiredDateStr = scanner.nextLine();
-        Timestamp v_requiredDate = Timestamp.valueOf(v_requiredDateStr);
+    System.out.print("Enter New Required Date (YYYY-MM-DD) or -1 for unchanged: ");
+    String v_requiredDateStr = scanner.nextLine();
+    Timestamp v_requiredDate = null;
+    if (!v_requiredDateStr.equals("-1")) {
+        v_requiredDate = Timestamp.valueOf(v_requiredDateStr + " 00:00:00");
+    }
 
-        System.out.print("Enter Status: ");
-        String v_status = scanner.nextLine();
+    System.out.print("Enter New Status or -1 for unchanged: ");
+    String v_status = scanner.nextLine();
+    if (v_status.equals("-1")) {
+        v_status = null;
+    }
 
-        System.out.print("Enter Comments: ");
-        String v_comments = scanner.nextLine();
-        scanner.close();
+    System.out.print("Enter New Comments or -1 for unchanged: ");
+    String v_comments = scanner.nextLine();
+    if (v_comments.equals("-1")) {
+        v_comments = null;
+    }
 
-        Connection conn = null;
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-        int nestedCall = 0;
-        int done = 0;
+    System.out.print("Enter End Username: ");
+    String endUsername = scanner.nextLine();
 
-        try {
-            conn = DriverManager.getConnection(url, username, password);
+    System.out.print("Enter End User Reason: ");
+    String endUserReason = scanner.nextLine();
+
+    Timestamp v_shippedDate = null;
+    if ("Shipped".equals(v_status)) {
+        System.out.print("Enter New Shipped Date (YYYY-MM-DD HH:MM:SS) or -1 for unchanged: ");
+        String v_shippedDateStr = scanner.nextLine();
+        if (!v_shippedDateStr.equals("-1")) {
+            v_shippedDate = Timestamp.valueOf(v_shippedDateStr);
+        }
+    }
+
+    scanner.close();
+
+    Connection conn = null;
+    PreparedStatement pstmt = null;
+    ResultSet rs = null;
+    int nestedCall = 0;
+
+    try {
+        conn = DriverManager.getConnection(url, username, password);
+        conn.setAutoCommit(false);
+
+        // Check for nested calls
+        String checkNestedCallSQL = "SELECT COUNT(1) FROM information_schema.innodb_trx WHERE trx_mysql_thread_id = CONNECTION_ID()";
+        pstmt = conn.prepareStatement(checkNestedCallSQL);
+        rs = pstmt.executeQuery();
+        if (rs.next()) {
+            nestedCall = rs.getInt(1);
+        }
+        rs.close();
+        pstmt.close();
+
+        if (nestedCall == 0) {
             conn.setAutoCommit(false);
+        }
 
-            // Check for nested calls
-            String checkNestedCallSQL = "SELECT COUNT(1) FROM information_schema.innodb_trx WHERE trx_mysql_thread_id = CONNECTION_ID()";
-            pstmt = conn.prepareStatement(checkNestedCallSQL);
+        // If order is cancelled, update stocks
+        if ("Cancelled".equals(v_status)) {
+            String selectOrderDetailsSQL = "SELECT productCode, quantityOrdered, orderLineNumber FROM orderdetails WHERE orderNumber = ?";
+            pstmt = conn.prepareStatement(selectOrderDetailsSQL);
+            pstmt.setInt(1, v_orderNumber);
             rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                String updateProduct = rs.getString("productCode");
+                int orderQuantity = rs.getInt("quantityOrdered");
+                int orderLineNumber = rs.getInt("orderLineNumber");
+
+                // Lock rows for update
+                String lockOrderDetailsSQL = "SELECT * FROM orderdetails WHERE orderNumber = ? AND productCode = ? AND orderLineNumber = ? FOR UPDATE";
+                pstmt = conn.prepareStatement(lockOrderDetailsSQL);
+                pstmt.setInt(1, v_orderNumber);
+                pstmt.setString(2, updateProduct);
+                pstmt.setInt(3, orderLineNumber);
+                pstmt.executeQuery();
+
+                String lockCurrentProductsSQL = "SELECT * FROM current_products WHERE productCode = ? FOR UPDATE";
+                pstmt = conn.prepareStatement(lockCurrentProductsSQL);
+                pstmt.setString(1, updateProduct);
+                pstmt.executeQuery();
+
+                // Update order details
+                String updateOrderDetailsSQL = "UPDATE orderdetails SET end_username = ?, end_userreason = 'Order Cancelled' WHERE orderNumber = ? AND productCode = ? AND orderLineNumber = ?";
+                pstmt = conn.prepareStatement(updateOrderDetailsSQL);
+                pstmt.setString(1, endUsername);
+                pstmt.setInt(2, v_orderNumber);
+                pstmt.setString(3, updateProduct);
+                pstmt.setInt(4, orderLineNumber);
+                pstmt.executeUpdate();
+            }
+            rs.close();
+            pstmt.close();
+        }
+
+        // Get current status of the order
+        String getStatusSQL = "SELECT getCurrentStatus(?) AS status, comments, orderDate FROM orders WHERE orderNumber = ?";
+        pstmt = conn.prepareStatement(getStatusSQL);
+        pstmt.setInt(1, v_orderNumber);
+        pstmt.setInt(2, v_orderNumber);
+        rs = pstmt.executeQuery();
+
+        String status_var = "";
+        String existingComments = null;
+        String orderDateString = null;
+        Timestamp orderDate_var = null;
+        if (rs.next()) {
+            status_var = rs.getString("status");
+            existingComments = rs.getString("comments");
+            orderDateString = rs.getString("orderDate");
+            orderDate_var = Timestamp.valueOf(orderDateString);
+        }
+        rs.close();
+        pstmt.close();
+
+        if(orderDate_var != null && v_requiredDate != null) {
+       // Get current status of the order
+       String checkDateSQL = "SELECT DATEDIFF(?, ?) AS difference;";
+       pstmt = conn.prepareStatement(checkDateSQL);
+         pstmt.setTimestamp(1, v_requiredDate);
+            pstmt.setTimestamp(2, orderDate_var);
+       rs = pstmt.executeQuery();
+
+        int difference = 0;
+        if (rs.next()) {
+            difference = rs.getInt("difference");
+        }
+        rs.close();
+
+        if (difference < 3) {
+            System.out.println("Error 91C6: Required Date must be at least three days");
+            return 0;
+        }
+        }
+
+        // Check if status transition is valid
+        if (v_status != null) {
+            String checkStatusChangeSQL = "SELECT checkStatusChange(?, ?) AS statusChange";
+            pstmt = conn.prepareStatement(checkStatusChangeSQL);
+            pstmt.setString(1, status_var);
+            pstmt.setString(2, v_status);
+            rs = pstmt.executeQuery();
+
+            boolean isValidTransition = false;
             if (rs.next()) {
-                nestedCall = rs.getInt(1);
+                isValidTransition = rs.getBoolean("statusChange");
             }
             rs.close();
             pstmt.close();
 
-            if (nestedCall == 0) {
-                conn.setAutoCommit(false);
-            }
-
-            // If order is cancelled, update stocks
-            if (v_status.equals("Cancelled")) {
-                String selectOrderDetailsSQL = "SELECT productCode, quantityOrdered, orderLineNumber FROM orderdetails WHERE orderNumber = ?";
-                pstmt = conn.prepareStatement(selectOrderDetailsSQL);
-                pstmt.setInt(1, v_orderNumber);
-                rs = pstmt.executeQuery();
-
-                while (rs.next()) {
-                    String updateProduct = rs.getString("productCode");
-                    int orderQuantity = rs.getInt("quantityOrdered");
-                    int orderLineNumber = rs.getInt("orderLineNumber");
-
-                    String lockOrderDetailsSQL = "SELECT * FROM orderdetails WHERE orderNumber = ? AND productCode = ? AND orderLineNumber = ? FOR UPDATE";
-                    pstmt = conn.prepareStatement(lockOrderDetailsSQL);
-                    pstmt.setInt(1, v_orderNumber);
-                    pstmt.setString(2, updateProduct);
-                    pstmt.setInt(3, orderLineNumber);
-                    pstmt.executeQuery();
-
-                    String lockCurrentProductsSQL = "SELECT * FROM current_products WHERE productCode = ? FOR UPDATE";
-                    pstmt = conn.prepareStatement(lockCurrentProductsSQL);
-                    pstmt.setString(1, updateProduct);
-                    pstmt.executeQuery();
-
-                    String updateOrderDetailsSQL = "UPDATE orderdetails SET end_username = 'System', end_userreason = 'Order Cancelled' WHERE orderNumber = ? AND productCode = ? AND orderLineNumber = ?";
-                    pstmt = conn.prepareStatement(updateOrderDetailsSQL);
-                    pstmt.setInt(1, v_orderNumber);
-                    pstmt.setString(2, updateProduct);
-                    pstmt.setInt(3, orderLineNumber);
-                    pstmt.executeUpdate();
-                }
-                rs.close();
-                pstmt.close();
-            }
-
-            // Get current status of the order
-String getStatusSQL = "SELECT getCurrentStatus(?) AS status";
-pstmt = conn.prepareStatement(getStatusSQL);
-pstmt.setInt(1, v_orderNumber);
-rs = pstmt.executeQuery();
-
-String status_var = "";
-if (rs.next()) {
-    status_var = rs.getString("status");
-}
-rs.close();
-pstmt.close();
-
-            // Prevent the updating of the order if cancelled
-            if (status_var.equals("Cancelled")) {
-                throw new SQLException("ERROR 91C0: Cannot update cancelled order from the orders table.");
-            }
-
-            // Lock the orders table row for update
-            String lockOrdersSQL = "SELECT * FROM orders WHERE orderNumber = ? FOR UPDATE";
-            pstmt = conn.prepareStatement(lockOrdersSQL);
-            pstmt.setInt(1, v_orderNumber);
-            pstmt.executeQuery();
-            pstmt.close();
-
-            // Update the orders table
-            String updateOrdersSQL = "UPDATE orders SET requiredDate = ?, status = ?, comments = CONCAT(comments, '\n', ?) WHERE orderNumber = ?";
-            pstmt = conn.prepareStatement(updateOrdersSQL);
-            pstmt.setTimestamp(1, v_requiredDate);
-            pstmt.setString(2, v_status);
-            pstmt.setString(3, v_comments);
-            pstmt.setInt(4, v_orderNumber);
-            pstmt.executeUpdate();
-            pstmt.close();
-
-            if (nestedCall == 0) {
-                conn.commit();
-            }
-
-            System.out.println("Order updated successfully!");
-            return 1;
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-            // Handle rollback with the same connection instance used for the transaction
-            try {
-                if (conn != null) {
-                    conn.rollback();
-                }
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-            }
-            return 0;
-        } finally {
-            // Close resources
-            try {
-                if (rs != null) rs.close();
-                if (pstmt != null) pstmt.close();
-                if (conn != null) conn.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
+            if (!isValidTransition) {
+                throw new SQLException("ERROR 91C3: Invalid status transition.");
             }
         }
-    
 
+        // Prevent the updating of the order if cancelled
+        if ("Cancelled".equals(status_var)) {
+            throw new SQLException("ERROR 91C0: Cannot update cancelled order from the orders table.");
+        }
+
+        // Prevent updates if the order is completed
+        if ("Completed".equals(status_var)) {
+            throw new SQLException("ERROR 91C4: No updates allowed after order is completed.");
+        }
+
+        if ("Shipped".equals(v_status)) {
+            // Check if the shipped date is valid by calling the MySQL function
+            String checkShippedDateSQL = "SELECT checkShippedDate(?, ?, ?) AS isValid";
+            pstmt = conn.prepareStatement(checkShippedDateSQL);
+            pstmt.setString(1, v_status);
+            pstmt.setTimestamp(2, v_shippedDate);
+            pstmt.setTimestamp(3, v_requiredDate);
+            rs = pstmt.executeQuery();
+            if (rs.next()) {
+                if (!rs.getBoolean("isValid")) {
+                    System.out.println("ERROR 91C5: Invalid input.");
+                    return 0;
+                }
+            }
+            rs.close();
+            pstmt.close();
+        }
+
+        // Lock the orders table row for update
+        String lockOrdersSQL = "SELECT * FROM orders WHERE orderNumber = ? FOR UPDATE";
+        pstmt = conn.prepareStatement(lockOrdersSQL);
+        pstmt.setInt(1, v_orderNumber);
+        pstmt.executeQuery();
+        pstmt.close();
+
+        // Update the orders table
+        StringBuilder updateOrdersSQL = new StringBuilder("UPDATE orders SET ");
+        boolean first = true;
+        if (v_requiredDate != null) {
+            updateOrdersSQL.append("requiredDate = ?");
+            first = false;
+        }
+        if (v_status != null) {
+            if (!first) updateOrdersSQL.append(", ");
+            updateOrdersSQL.append("status = ?");
+            first = false;
+        }
+        if (v_comments != null) {
+            if (!first) updateOrdersSQL.append(", ");
+            updateOrdersSQL.append("comments = ");
+            if (existingComments != null) {
+                updateOrdersSQL.append("CONCAT(comments, '\n', ?)");
+            } else {
+                updateOrdersSQL.append("?");
+            }
+            first = false;
+        }
+        if ("Shipped".equals(v_status) && v_shippedDate != null) {
+            if (!first) updateOrdersSQL.append(", ");
+            updateOrdersSQL.append("shippedDate = ?");
+        }
+        if (!first) updateOrdersSQL.append(", ");
+        updateOrdersSQL.append("end_username = ?, end_userreason = ?");
+
+        updateOrdersSQL.append(" WHERE orderNumber = ?");
+
+        pstmt = conn.prepareStatement(updateOrdersSQL.toString());
+        int paramIndex = 1;
+        if (v_requiredDate != null) {
+            pstmt.setTimestamp(paramIndex++, v_requiredDate);
+        }
+        if (v_status != null) {
+            pstmt.setString(paramIndex++, v_status);
+        }
+        if (v_comments != null) {
+            if (existingComments != null) {
+                pstmt.setString(paramIndex++, v_comments);
+            } else {
+                pstmt.setString(paramIndex++, v_comments);
+            }
+        }
+        if ("Shipped".equals(v_status) && v_shippedDate != null) {
+            pstmt.setTimestamp(paramIndex++, v_shippedDate);
+        }
+        pstmt.setString(paramIndex++, endUsername);
+        pstmt.setString(paramIndex++, endUserReason);
+        pstmt.setInt(paramIndex++, v_orderNumber);
+        pstmt.executeUpdate();
+        pstmt.close();
+
+        if (nestedCall == 0) {
+            conn.commit();
+        }
+
+        System.out.println("Order updated successfully!");
+        return 1;
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+        // Handle rollback with the same connection instance used for the transaction
+        try {
+            if (conn != null) {
+                conn.rollback();
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+        return 0;
+    } finally {
+        // Close resources
+        try {
+            if (rs != null) rs.close();
+            if (pstmt != null) pstmt.close();
+            if (conn != null) conn.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 }
+
 
 
 
