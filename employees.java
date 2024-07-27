@@ -7,13 +7,13 @@ public class employees {
     
     // public String url = "jdbc:mysql://mysql-176128-0.cloudclusters.net:10107/dbsalesV2.5G205";
      public String url = "jdbc:mysql://mysql-176128-0.cloudclusters.net:10107/DBSALES26_G205";
-     public String username = "DBADM_205";
+    public String username = "DBADM_205";
      public String password = "DLSU1234!";
 
     
-    //public String url = "jdbc:mysql://127.0.0.1:3306/dbsales26_g205";
+    //public String url = "jdbc:mysql://localhost:3306/dbsalesv2.5g205";
     //public String username = "root";
-    //public String password = "DLSU1234";
+    //public String password = "12345678";
 
 
     public int      employeeID;
@@ -100,6 +100,7 @@ public class employees {
 
     }
 
+
     public int reclassifyEmployee() {
         Scanner sc = new Scanner(System.in);
         int employeeID;
@@ -108,19 +109,19 @@ public class employees {
         PreparedStatement pstmt = null;
         ResultSet rs = null;
 
-        PreparedStatement sleeppstmt = null;
-
         try {
             System.out.println("Enter Employee ID:");
             employeeID = Integer.parseInt(sc.nextLine());
 
             conn = DriverManager.getConnection(url, username, password);
             conn.setAutoCommit(false);
+            conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
 
-            String lockSql = "SELECT * FROM employees WHERE employeeNumber = ?";
+            String lockSql = "SELECT * FROM employees WHERE employeeNumber = ? FOR UPDATE";
             pstmt = conn.prepareStatement(lockSql);
             pstmt.setInt(1, employeeID);
             rs = pstmt.executeQuery();
+            System.out.println("\nLOCKED\n");
 
             if (!rs.next()) {
                 System.out.println("Employee does not exist.");
@@ -166,23 +167,33 @@ public class employees {
             System.out.println("Press Enter to Start Reclassifying Employee");
             sc.nextLine();
 
-            sleeppstmt = conn.prepareStatement("SELECT SLEEP (3)");
-            sleeppstmt.executeQuery();
-
-            System.out.println(pstmt);
-
             pstmt.execute();
-            pstmt.close();
-            conn.close();
-            sleeppstmt.close();
-            System.out.println("Employee reclassified successfully.");
+            conn.commit();
 
-        }  catch (Exception e) {
+            System.out.println("Employee reclassified successfully.");
+            return 1;
+
+        } catch (Exception e) {
             System.out.println(e.getMessage());
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException rollbackEx) {
+                    System.out.println("Rollback Error: " + rollbackEx.getMessage());
+                }
+            }
             return 0;
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstmt != null) pstmt.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                System.out.println("Error closing resources: " + e.getMessage());
+            }
         }
-        return 0;
     }
+
 
 
     public int resignEmployee() {
@@ -283,6 +294,11 @@ public class employees {
 
             System.out.println("Enter Employee ID:");
             employeeID = Integer.parseInt(sc.nextLine());
+
+            sql = "SELECT * FROM employees WHERE employeeNumber = ? FOR UPDATE";
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, employeeID);
+            pstmt.executeQuery();
 
             System.out.println("Enter Office Code:");
             officeCode = Integer.parseInt(sc.nextLine());
@@ -514,24 +530,25 @@ public class employees {
             }
         }
     }
-    
+
     public int viewEmployee() {
         Scanner sc = new Scanner(System.in);
-    
         System.out.println("Enter [0] To View All Employees \nEnter Employee ID:");
         int employeeID = Integer.parseInt(sc.nextLine());
-    
+
         Connection conn = null;
         PreparedStatement pstmt = null;
         ResultSet rs = null;
-    
+
         try {
             conn = DriverManager.getConnection(url, username, password);
             System.out.println("Connection Successful");
             conn.setAutoCommit(false);
-    
+
             String sql;
-    
+            System.out.println("Press Enter to Start Viewing the Employee(s)");
+            sc.nextLine();
+
             if (employeeID == 0) {
                 sql = "SELECT * FROM employees LOCK IN SHARE MODE";
                 pstmt = conn.prepareStatement(sql);
@@ -540,15 +557,14 @@ public class employees {
                 pstmt = conn.prepareStatement(sql);
                 pstmt.setInt(1, employeeID);
             }
-    
-            System.out.println("Press Enter to Start Viewing the Employee(s)");
-            sc.nextLine();
-    
+
             rs = pstmt.executeQuery();
-    
+
             if (employeeID == 0) {
                 employeeTableHeader();
                 while (rs.next()) {
+
+                    rs = pstmt.executeQuery();
                     employeeTableRow(rs);
                 }
             } else {
@@ -559,28 +575,31 @@ public class employees {
                     System.out.println("Employee does not exist.");
                 }
             }
-    
-            rs.close();
-            pstmt.close();
+
             conn.commit();
-            conn.close();
-            return 1;
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-            return 0;
+            return 1; // Return 1 on success
         } catch (Exception e) {
             System.out.println(e.getMessage());
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException se) {
+                    se.printStackTrace();
+                }
+            }
             return 0;
         } finally {
             try {
                 if (rs != null) rs.close();
                 if (pstmt != null) pstmt.close();
                 if (conn != null) conn.close();
-            } catch (SQLException e) {
-                System.out.println("Error closing resources: " + e.getMessage());
+            } catch (SQLException se) {
+                se.printStackTrace();
             }
         }
     }
+
+
 
     private void employeeTableHeader() {
         System.out.println("---------------------------------------------------------------------------------------------------------------------------------------------");
@@ -1250,7 +1269,7 @@ public class employees {
                             case 1:
                                 e.addEmployee();
                                 break;
-                            case 2:
+                            case 2: // reClassify
                                 e.reclassifyEmployee();
                                 break;
                             case 3:
