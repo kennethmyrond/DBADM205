@@ -91,6 +91,7 @@ public class employees {
             pstmt.close();
             conn.commit();
             conn.close();
+            sc.close();
             System.out.println("Employee was added!");
             return 1;
         } catch (Exception e) {
@@ -188,6 +189,7 @@ public class employees {
                 if (rs != null) rs.close();
                 if (pstmt != null) pstmt.close();
                 if (conn != null) conn.close();
+                if (sc != null) sc.close();
             } catch (SQLException e) {
                 System.out.println("Error closing resources: " + e.getMessage());
             }
@@ -239,6 +241,7 @@ public class employees {
             try {
                 if (pstmt != null) pstmt.close();
                 if (conn != null) conn.close();
+                if (sc != null) sc.close();
             } catch (SQLException se) {
                 se.printStackTrace();
             }
@@ -380,6 +383,7 @@ public class employees {
                 if (rs != null) rs.close();
                 if (pstmt != null) pstmt.close();
                 if (conn != null) conn.close();
+                if (sc != null) sc.close();
             } catch (SQLException e) {
                 System.out.println("Error closing resources: " + e.getMessage());
             }
@@ -525,6 +529,7 @@ public class employees {
                 if (rs != null) rs.close();
                 if (pstmt != null) pstmt.close();
                 if (conn != null) conn.close();
+                if (sc != null) sc.close();
             } catch (SQLException se) {
                 se.printStackTrace();
             }
@@ -593,6 +598,7 @@ public class employees {
                 if (rs != null) rs.close();
                 if (pstmt != null) pstmt.close();
                 if (conn != null) conn.close();
+                if (sc != null) sc.close();
             } catch (SQLException se) {
                 se.printStackTrace();
             }
@@ -766,6 +772,7 @@ public class employees {
                 if (fetchPstmt != null) fetchPstmt.close();
                 if (updatePstmt != null) updatePstmt.close();
                 if (conn != null) conn.close();
+                if (sc != null) sc.close();
             } catch (SQLException se) {
                 se.printStackTrace();
             }
@@ -811,6 +818,7 @@ public class employees {
                 System.out.println("Job Title: " + currentJobTitle);
             } else {
                 System.out.println("No employee found with the given ID.");
+                sc.close();
                 return 1;
             }
             rs.close();
@@ -892,6 +900,7 @@ public class employees {
 
             conn.commit();
             conn.close();
+            sc.close();
         } catch (SQLException e) {
             System.out.println("Error updating employee details: " + e.getMessage());
             try {
@@ -963,6 +972,7 @@ public class employees {
                     conn.commit();
                     conn.close();
                     }
+                if (sc != null) sc.close();
             } catch (SQLException se) {
                 se.printStackTrace();
             }
@@ -1097,6 +1107,7 @@ public class employees {
                 if (fetchPstmt != null) fetchPstmt.close();
                 if (updatePstmt != null) updatePstmt.close();
                 if (conn != null) conn.close();
+                if (sc != null) sc.close();
             } catch (SQLException se) {
                 se.printStackTrace();
             }
@@ -1111,7 +1122,7 @@ public class employees {
 
         Connection conn = null;
         PreparedStatement fetchPstmt = null;
-        PreparedStatement SleepPstmt = null;
+        //PreparedStatement SleepPstmt = null;
         PreparedStatement updatePstmt = null;
         ResultSet rs = null;
 
@@ -1173,6 +1184,7 @@ public class employees {
                 if (conn != null) {
                     conn.commit();
                     conn.close();}
+                if (sc != null) sc.close();
             } catch (SQLException se) {
                 se.printStackTrace();
             }
@@ -1227,6 +1239,7 @@ public class employees {
             try {
                 if (pstmt != null) pstmt.close();
                 if (conn != null) conn.close();
+                if (sc != null) sc.close();
             } catch (SQLException se) {
                 se.printStackTrace();
             }
